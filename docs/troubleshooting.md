@@ -2,6 +2,8 @@
 
 ## Known errors
 
+New to WINE? Start with [wine-basics.md](wine-basics.md): prefixes, starting and stopping, screen scaling, paths, updates.
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | Online login (Simulation or device): `Unknown error "-2146893783"` | WINE `ncrypt` refuses RSA-OAEP: `0x80090029 NTE_NOT_SUPPORTED` ([details](#online-login-fails-unknown-error--2146893783)) | Use a WINE build with [wine-patches](../wine-patches/) (needs WINE ≥ 11.5 as the base) |
