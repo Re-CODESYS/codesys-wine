@@ -62,7 +62,7 @@ Planned: **agentic help for installation and management**, as an agent skill plu
 
 ### Known limitations
 
-- **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs two patched DLLs in the prefix, or a [patched WINE](wine-patches/), until the fix is in a WINE release. Real PLCs are not tested yet.
+- **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs two patched DLLs in the prefix, or a [patched WINE](wine-patches/), until WINE itself fixes these gaps. Real PLCs are not tested yet.
 - **No CodeMeter:** licensed add-ons and USB dongles don't work, and **Application Composer** is skipped because its plug-in is CodeMeter-protected.
 - **No Windows Gateway or Control Win.** For PLC communication, run CODESYS Control for Linux SL or the Edge Gateway for Linux natively (untested).
 - **On stock WINE, packages can't create Start-menu links.** Installing still works if `--cancelOnException` is left off, which `install.sh` does.
@@ -91,7 +91,7 @@ Details and fixes: [docs/troubleshooting.md](docs/troubleshooting.md).
 
 Distribution WINE packages stay on old versions for years. WineHQ's own packages take two commands to add. Everything here (IDE, the 43 bundled packages, the crypto fix and the patches) was tested on WINE 11, and the drop-in DLLs depend on the WINE version. If your distribution ships WINE 10 or older, add the WineHQ repository instead; see [WineHQ: Download](https://gitlab.winehq.org/wine/wine/-/wikis/Download). `install.sh` stops on WINE older than 11.
 
-Plan: when WINE 12.0 is released (expected January 2027), ideally with the ncrypt and shell32 fixes merged, the baseline moves to WINE 12 and the crypto fix is removed.
+Plan: when WINE 12.0 is released (expected January 2027), the baseline moves to WINE 12. If WINE has fixed the ncrypt and shell32 gaps by then (they are reported to WineHQ as bugs), the crypto fix is removed.
 
 ### What install.sh does
 
@@ -129,7 +129,7 @@ c3d493c2d1df71a539fdb34a31dbaec4e53610ec6a2b817b388b4e1e2a4ba1a9  CODESYS 64 3.5
 
 ### Online login: patched WINE
 
-Online login needs a WINE fix that isn't in a WINE release yet. [wine-patches/](wine-patches/) describes two ways to get it:
+Online login needs a fix that stock WINE doesn't have yet. [wine-patches/](wine-patches/) describes two ways to get it:
 
 - **Drop-in DLLs (Route A):** copy patched `ncrypt.dll` and `bcrypt.dll` into the CODESYS prefix and enable them for `CODESYS.exe` only. Your system WINE (stable 11.0) stays as it is. `install.sh` does this for you by default, using `install/crypto-fix.sh`:
   - It first explains what it changes and asks.
@@ -191,6 +191,8 @@ Please [open an issue](https://github.com/Re-CODESYS/codesys-wine/issues) with:
   - for packages, `drive_c/codesys-packages/<version>/<package>.log`
 
 For crashes and "not supported" or "not implemented" errors, a WINE trace makes the cause much easier to find. [docs/troubleshooting.md](docs/troubleshooting.md) explains how to capture one.
+
+**WINE itself:** if you find a WINE bug while testing, report it to [WineHQ Bugzilla](https://bugs.winehq.org) yourself, in your own words, with traces and steps. WineHQ asks contributors not to submit LLM-generated code, so please don't send the patches from this repository, or other AI-written code, to WineHQ.
 
 Pull requests are welcome. Scripts are MIT-licensed ([LICENSE](LICENSE)). WINE patches are LGPL-2.1+, like WINE itself ([wine-patches/COPYING](wine-patches/COPYING)). Never add CODESYS binaries, installers or packages to the repository.
 

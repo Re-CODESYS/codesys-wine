@@ -121,7 +121,7 @@ explain() {
   doesn't support yet. This step adds two patched WINE crypto DLLs (ncrypt, bcrypt)
   to this prefix and enables them for CODESYS.exe only. Nothing outside the prefix
   changes, and "install/crypto-fix.sh remove" undoes it. This is a temporary fix
-  until the patches are in WINE. Patches, sources and license (LGPL-2.1+):
+  until WINE itself fixes these gaps. Patches, sources and license (LGPL-2.1+):
   $INFO
 
 EOF
