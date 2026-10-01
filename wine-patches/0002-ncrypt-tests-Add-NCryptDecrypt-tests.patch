@@ -1,0 +1,99 @@
+From f2a22e7cf6b73faf5fb61a2b80efb6c5ea798dab Mon Sep 17 00:00:00 2001
+From: Struccc <184474500+Struccc@users.noreply.github.com>
+Date: Fri, 2 Oct 2026 00:19:41 +0700
+Subject: [PATCH 2/3] ncrypt/tests: Add NCryptDecrypt() tests.
+
+---
+ dlls/ncrypt/tests/ncrypt.c | 70 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 70 insertions(+)
+
+diff --git a/dlls/ncrypt/tests/ncrypt.c b/dlls/ncrypt/tests/ncrypt.c
+index 31e9125..bd19dae 100644
+--- a/dlls/ncrypt/tests/ncrypt.c
++++ b/dlls/ncrypt/tests/ncrypt.c
+@@ -823,6 +823,75 @@ static void test_NCryptEncrypt(void)
+     NCryptFreeObject(prov);
+ }
+ 
++static void test_NCryptDecrypt(void)
++{
++    static const WCHAR *hash_algs[] = { BCRYPT_SHA1_ALGORITHM, BCRYPT_SHA256_ALGORITHM };
++    BCRYPT_OAEP_PADDING_INFO oaep;
++    NCRYPT_PROV_HANDLE prov;
++    NCRYPT_KEY_HANDLE key;
++    SECURITY_STATUS ret;
++    BYTE encrypted[128], decrypted[128];
++    DWORD size;
++    unsigned int i;
++
++    NCryptOpenStorageProvider(&prov, NULL, 0);
++    NCryptCreatePersistedKey(prov, &key, BCRYPT_RSA_ALGORITHM, NULL, 0, 0);
++    NCryptFinalizeKey(key, 0);
++
++    /* Test decrypt with invalid key handle */
++    ret = NCryptDecrypt(prov, encrypted, sizeof(encrypted), NULL, NULL, 0, &size, NCRYPT_PAD_PKCS1_FLAG);
++    todo_wine
++    ok(ret == NTE_INVALID_HANDLE, "got %lx\n", ret);
++
++    /* Test decrypt with invalid flags */
++    ret = NCryptDecrypt(key, encrypted, sizeof(encrypted), NULL, NULL, 0, &size, 51342);
++    todo_wine
++    ok(ret == NTE_BAD_FLAGS, "got %lx\n", ret);
++
++    /* PKCS1 round trip */
++    ret = NCryptEncrypt(key, data_to_encrypt, sizeof(data_to_encrypt), NULL, encrypted, sizeof(encrypted),
++                        &size, NCRYPT_PAD_PKCS1_FLAG);
++    ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
++    ok(size == 128, "got %ld\n", size);
++
++    memset(decrypted, 0, sizeof(decrypted));
++    ret = NCryptDecrypt(key, encrypted, size, NULL, decrypted, sizeof(decrypted), &size, NCRYPT_PAD_PKCS1_FLAG);
++    todo_wine
++    ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
++    todo_wine
++    ok(size == sizeof(data_to_encrypt), "got %ld\n", size);
++    todo_wine
++    ok(!memcmp(decrypted, data_to_encrypt, sizeof(data_to_encrypt)), "data mismatch\n");
++
++    /* OAEP round trip, NULL label as used by .NET */
++    for (i = 0; i < ARRAY_SIZE(hash_algs); i++)
++    {
++        winetest_push_context("%s", wine_dbgstr_w(hash_algs[i]));
++        oaep.pszAlgId = hash_algs[i];
++        oaep.pbLabel = NULL;
++        oaep.cbLabel = 0;
++
++        ret = NCryptEncrypt(key, data_to_encrypt, sizeof(data_to_encrypt), &oaep, encrypted, sizeof(encrypted),
++                            &size, NCRYPT_PAD_OAEP_FLAG);
++        ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
++        ok(size == 128, "got %ld\n", size);
++
++        memset(decrypted, 0, sizeof(decrypted));
++        ret = NCryptDecrypt(key, encrypted, size, &oaep, decrypted, sizeof(decrypted), &size,
++                            NCRYPT_PAD_OAEP_FLAG | NCRYPT_SILENT_FLAG);
++        todo_wine
++        ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
++        todo_wine
++        ok(size == sizeof(data_to_encrypt), "got %ld\n", size);
++        todo_wine
++        ok(!memcmp(decrypted, data_to_encrypt, sizeof(data_to_encrypt)), "data mismatch\n");
++        winetest_pop_context();
++    }
++
++    NCryptFreeObject(key);
++    NCryptFreeObject(prov);
++}
++
+ static void test_NCryptExportKey(void)
+ {
+     NCRYPT_PROV_HANDLE prov;
+@@ -865,5 +934,6 @@ START_TEST(ncrypt)
+     test_verify_signature();
+     test_NCryptIsAlgSupported();
+     test_NCryptEncrypt();
++    test_NCryptDecrypt();
+     test_NCryptExportKey();
+ }
+-- 
+2.47.3
+

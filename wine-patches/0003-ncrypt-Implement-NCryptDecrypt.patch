@@ -1,0 +1,84 @@
+From 583d8eae63f34b6efe29c3c9cb4f0cef145b87b0 Mon Sep 17 00:00:00 2001
+From: Struccc <184474500+Struccc@users.noreply.github.com>
+Date: Fri, 2 Oct 2026 00:19:41 +0700
+Subject: [PATCH 3/3] ncrypt: Implement NCryptDecrypt().
+
+Forward to BCryptDecrypt() like NCryptEncrypt() does.
+---
+ dlls/ncrypt/main.c         | 17 +++++++++++++++--
+ dlls/ncrypt/tests/ncrypt.c |  8 --------
+ 2 files changed, 15 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/ncrypt/main.c b/dlls/ncrypt/main.c
+index 1ca84cc..da89c0b 100644
+--- a/dlls/ncrypt/main.c
++++ b/dlls/ncrypt/main.c
+@@ -243,9 +243,22 @@ SECURITY_STATUS WINAPI NCryptCreatePersistedKey(NCRYPT_PROV_HANDLE provider, NCR
+ SECURITY_STATUS WINAPI NCryptDecrypt(NCRYPT_KEY_HANDLE key, BYTE *input, DWORD insize, void *padding,
+                                      BYTE *output, DWORD outsize, DWORD *result, DWORD flags)
+ {
+-    FIXME("(%#Ix, %p, %lu, %p, %p, %lu, %p, %#lx): stub\n", key, input, insize, padding,
++    struct object *key_object = (struct object *)key;
++
++    TRACE("(%#Ix, %p, %lu, %p, %p, %lu, %p, %#lx)\n", key, input, insize, padding,
+           output, outsize, result, flags);
+-    return NTE_NOT_SUPPORTED;
++
++    if (flags & ~(NCRYPT_NO_PADDING_FLAG | NCRYPT_PAD_OAEP_FLAG
++                | NCRYPT_PAD_PKCS1_FLAG | NCRYPT_SILENT_FLAG))
++    {
++        FIXME("Flags %lx not supported\n", flags);
++        return NTE_BAD_FLAGS;
++    }
++
++    if (key_object->type != KEY) return NTE_INVALID_HANDLE;
++
++    return map_ntstatus(BCryptDecrypt(key_object->key.bcrypt_key, input, insize, padding,
++                                      NULL, 0, output, outsize, result, flags & ~NCRYPT_SILENT_FLAG));
+ }
+ 
+ SECURITY_STATUS WINAPI NCryptDeleteKey(NCRYPT_KEY_HANDLE key, DWORD flags)
+diff --git a/dlls/ncrypt/tests/ncrypt.c b/dlls/ncrypt/tests/ncrypt.c
+index bd19dae..3107f3c 100644
+--- a/dlls/ncrypt/tests/ncrypt.c
++++ b/dlls/ncrypt/tests/ncrypt.c
+@@ -840,12 +840,10 @@ static void test_NCryptDecrypt(void)
+ 
+     /* Test decrypt with invalid key handle */
+     ret = NCryptDecrypt(prov, encrypted, sizeof(encrypted), NULL, NULL, 0, &size, NCRYPT_PAD_PKCS1_FLAG);
+-    todo_wine
+     ok(ret == NTE_INVALID_HANDLE, "got %lx\n", ret);
+ 
+     /* Test decrypt with invalid flags */
+     ret = NCryptDecrypt(key, encrypted, sizeof(encrypted), NULL, NULL, 0, &size, 51342);
+-    todo_wine
+     ok(ret == NTE_BAD_FLAGS, "got %lx\n", ret);
+ 
+     /* PKCS1 round trip */
+@@ -856,11 +854,8 @@ static void test_NCryptDecrypt(void)
+ 
+     memset(decrypted, 0, sizeof(decrypted));
+     ret = NCryptDecrypt(key, encrypted, size, NULL, decrypted, sizeof(decrypted), &size, NCRYPT_PAD_PKCS1_FLAG);
+-    todo_wine
+     ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
+-    todo_wine
+     ok(size == sizeof(data_to_encrypt), "got %ld\n", size);
+-    todo_wine
+     ok(!memcmp(decrypted, data_to_encrypt, sizeof(data_to_encrypt)), "data mismatch\n");
+ 
+     /* OAEP round trip, NULL label as used by .NET */
+@@ -879,11 +874,8 @@ static void test_NCryptDecrypt(void)
+         memset(decrypted, 0, sizeof(decrypted));
+         ret = NCryptDecrypt(key, encrypted, size, &oaep, decrypted, sizeof(decrypted), &size,
+                             NCRYPT_PAD_OAEP_FLAG | NCRYPT_SILENT_FLAG);
+-        todo_wine
+         ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
+-        todo_wine
+         ok(size == sizeof(data_to_encrypt), "got %ld\n", size);
+-        todo_wine
+         ok(!memcmp(decrypted, data_to_encrypt, sizeof(data_to_encrypt)), "data mismatch\n");
+         winetest_pop_context();
+     }
+-- 
+2.47.3
+

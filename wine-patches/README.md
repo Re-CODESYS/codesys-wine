@@ -2,16 +2,35 @@
 
 These patches fix WINE gaps that break CODESYS V3.5. They are written against WINE master and are meant to go upstream (not submitted yet). Once WINE ships them, this directory only needs to say which WINE version to use.
 
-| Patch | Fixes | Upstream |
+| Patches | Fixes | Upstream |
 |---|---|---|
-| `0001-ncrypt-…` | **Online login** (Simulation, very likely real PLCs too): `Unknown error "-2146893783"` (`0x80090029 NTE_NOT_SUPPORTED`). `NCryptEncrypt` refused RSA OAEP padding, and `NCryptDecrypt` was a stub. | not yet submitted |
-| `0002-shell32-…` | **Package install** aborting at `Link: ….exe` with "The method or operation is not implemented" (for example Visualization 4.10). `IShellLinkDataList::RemoveDataBlock` was a stub. | not yet submitted |
+| `0001`–`0003` ncrypt | **Online login** (Simulation, very likely real PLCs too): `Unknown error "-2146893783"` (`0x80090029 NTE_NOT_SUPPORTED`). `NCryptEncrypt` refused RSA OAEP padding, and `NCryptDecrypt` was a stub. | not yet submitted |
+| `0004`–`0005` shell32 | **Package install** aborting at `Link: ….exe` with "The method or operation is not implemented" (for example Visualization 4.10). `IShellLinkDataList::RemoveDataBlock` was a stub; CODESYS removes the `EXP_SZ_ICON_SIG` block. | not yet submitted |
 
-Both patches include WINE conformance tests (`dlls/ncrypt/tests`, `dlls/shell32/tests`). These pass on WINE in 32-bit and 64-bit.
+The patches follow WINE's submission conventions: conformance tests go in their own commit with `todo_wine` markers, and the fix commit removes those markers. The tests in `dlls/ncrypt/tests` and `dlls/shell32/tests` pass on WINE in 32-bit and 64-bit at every commit.
 
-The RSA-OAEP part also depends on bcrypt fixes that first shipped in WINE 11.5 ([bug 59460](https://bugs.winehq.org/show_bug.cgi?id=59460)). So the patches need **WINE ≥ 11.5**. WINE 11.0 doesn't work, even with the patches applied.
+The RSA-OAEP fix also depends on bcrypt fixes that first shipped in WINE 11.5 ([bug 59460](https://bugs.winehq.org/show_bug.cgi?id=59460)). So applying the patches to the WINE 11.0 source isn't enough. Use one of the two routes below.
 
-## Build
+## Route A: drop-in DLLs for stock `winehq-stable` 11.0
+
+This needs no WINE rebuild on the target machine. Only CODESYS uses the patched DLLs; every other program in the prefix keeps WINE's own DLLs.
+
+1. Take `ncrypt.dll` and `bcrypt.dll` from a build (Route B), or from a release of this repository once one is published.
+2. Copy the `x86_64-windows` versions to `$WINEPREFIX/drive_c/windows/system32/` and the `i386-windows` versions to `.../syswow64/`.
+3. In those copies, overwrite the 16-byte marker `Wine builtin DLL` at file offset `0x40` with any other text. Otherwise WINE recognizes the files as its own builtins and loads its unpatched copy instead (`WINEDLLPATH` doesn't help either).
+4. Set per-application overrides for CODESYS only:
+   ```sh
+   wine reg add 'HKCU\Software\Wine\AppDefaults\CODESYS.exe\DllOverrides' /v ncrypt /d native,builtin /f
+   wine reg add 'HKCU\Software\Wine\AppDefaults\CODESYS.exe\DllOverrides' /v bcrypt /d native,builtin /f
+   ```
+
+To undo: delete the two registry values, and copy back the originals from `/opt/wine-stable/lib/wine/*-windows/`.
+
+To check that it works, look for these lines in a `WINEDEBUG=+loaddll` trace: `Loaded L"C:\\windows\\system32\\ncrypt.dll" … : native`, and the same for `bcrypt.dll`.
+
+shell32 isn't part of the drop-in. Replacing WINE's shell32 affects all file and shortcut handling, and it's only needed while installing packages. On stock WINE, install packages without `--cancelOnException`; only the editors' start-menu links are then missing.
+
+## Route B: build patched WINE
 
 ```sh
 wine-patches/build-wine.sh --deps   # first time: installs build dependencies with sudo
@@ -23,22 +42,25 @@ This clones WINE into `~/wine-dev/src`, applies the patches on top of the tested
 - The first build takes 1–2 hours on a 2-core laptop. After a source change, only the affected DLL is rebuilt, which takes seconds.
 - It needs about 1.4 GB of `-dev` packages and roughly 6 GB in `~/wine-dev`.
 
-## Use
+Run it on a **copy** of your prefix:
 
 ```sh
 cp -a ~/.local/share/wineprefixes/codesys ~/.local/share/wineprefixes/codesys-dev
 WINEPREFIX=~/.local/share/wineprefixes/codesys-dev ~/wine-dev/build/wine <command>
 ```
 
-Run it on a **copy** of your prefix. The first start updates the prefix to the newer WINE version, and you can't undo that with the stable WINE.
+The first start updates the prefix to the newer WINE version, and stable WINE can't undo that.
 
 ## Tested
 
-| CODESYS | WINE | Result |
-|---|---|---|
-| V3.5 SP22 Patch 4 | 11.0 (stable) | Login fails, `0x80090029` |
-| V3.5 SP22 Patch 4 | master `6d1b094` + patches (11.18) | **Simulation login OK** |
+| CODESYS | WINE | Login (Simulation) | Visualization 4.10 with `--cancelOnException` |
+|---|---|---|---|
+| V3.5 SP22 Patch 4 | 11.0 (stable) | fails, `0x80090029` | aborts at the Link step |
+| V3.5 SP22 Patch 4 | master `6d1b094` + patches (11.18) | **OK** | **OK**, links created |
+| V3.5 SP22 Patch 4 | 11.0 (stable) + drop-in ncrypt/bcrypt (Route A) | **OK** | not tested (no shell32 drop-in) |
+
+These were tested with the headless login test in [tests/](../tests/). The GUI and real PLCs haven't been tested yet.
 
 ## License
 
-These patches modify WINE and so fall under WINE's license, LGPL-2.1-or-later. See [COPYING](COPYING). This differs from the MIT license that covers the rest of the repository.
+These patches modify WINE and so fall under WINE's license, LGPL-2.1-or-later. See [COPYING](COPYING). The same applies to DLLs built from them. This differs from the MIT license that covers the rest of the repository.

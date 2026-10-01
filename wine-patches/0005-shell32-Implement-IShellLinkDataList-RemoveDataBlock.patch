@@ -1,12 +1,17 @@
-From 599e98a42fdf66922c14a0715c0071ebfe028146 Mon Sep 17 00:00:00 2001
+From ac30ad983d0c0f2e9854013b9d896d885739d7ff Mon Sep 17 00:00:00 2001
 From: Struccc <184474500+Struccc@users.noreply.github.com>
-Date: Thu, 1 Oct 2026 21:04:59 +0700
-Subject: [PATCH 2/2] shell32: Implement IShellLinkDataList::RemoveDataBlock().
+Date: Fri, 2 Oct 2026 00:25:19 +0700
+Subject: [PATCH 5/5] shell32: Implement IShellLinkDataList::RemoveDataBlock().
 
+We only keep the darwin ID data block, so only that one actually needs
+to be removed. For other blocks there is nothing stored to remove.
+
+The CODESYS package manager removes the EXP_SZ_ICON_SIG block while
+creating shortcuts and aborts the package installation on failure.
 ---
  dlls/shell32/shelllink.c       | 19 +++++++++++++++++--
- dlls/shell32/tests/shelllink.c | 21 +++++++++++++++++++++
- 2 files changed, 38 insertions(+), 2 deletions(-)
+ dlls/shell32/tests/shelllink.c | 14 +++++++-------
+ 2 files changed, 24 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/shell32/shelllink.c b/dlls/shell32/shelllink.c
 index 61d0eaa..4c6c538 100644
@@ -39,37 +44,43 @@ index 61d0eaa..4c6c538 100644
  
  static HRESULT WINAPI
 diff --git a/dlls/shell32/tests/shelllink.c b/dlls/shell32/tests/shelllink.c
-index e80a849..9a3b66b 100644
+index 6fa5307..c631518 100644
 --- a/dlls/shell32/tests/shelllink.c
 +++ b/dlls/shell32/tests/shelllink.c
-@@ -918,6 +918,27 @@ if (0)
- 
+@@ -919,26 +919,26 @@ if (0)
      LocalFree( dar );
  
-+    r = IShellLinkDataList_RemoveDataBlock( dl, EXP_DARWIN_ID_SIG );
+     r = IShellLinkDataList_RemoveDataBlock( dl, EXP_DARWIN_ID_SIG );
+-    todo_wine ok( r == S_OK, "RemoveDataBlock failed, hr %#lx.\n", r );
 +    ok( r == S_OK, "RemoveDataBlock failed, hr %#lx.\n", r );
-+
-+    flags = 0;
-+    r = IShellLinkDataList_GetFlags( dl, &flags );
-+    ok( r == S_OK, "GetFlags failed\n");
+ 
+     flags = 0;
+     r = IShellLinkDataList_GetFlags( dl, &flags );
+     ok( r == S_OK, "GetFlags failed\n");
+-    todo_wine ok( !(flags & SLDF_HAS_DARWINID), "got flags %#lx\n", flags );
 +    ok( !(flags & SLDF_HAS_DARWINID), "got flags %#lx\n", flags );
-+
-+    dar = (void*)-1;
-+    r = IShellLinkDataList_CopyDataBlock( dl, EXP_DARWIN_ID_SIG, (LPVOID*) &dar );
+ 
+     dar = (void*)-1;
+     r = IShellLinkDataList_CopyDataBlock( dl, EXP_DARWIN_ID_SIG, (LPVOID*) &dar );
+-    todo_wine ok( r == E_FAIL, "CopyDataBlock returned %#lx\n", r );
+-    todo_wine ok( dar == NULL, "should be null\n");
 +    ok( r == E_FAIL, "CopyDataBlock returned %#lx\n", r );
 +    ok( dar == NULL, "should be null\n");
-+
-+    /* removing a block that is not present */
-+    r = IShellLinkDataList_RemoveDataBlock( dl, EXP_DARWIN_ID_SIG );
+     if (r == S_OK) LocalFree( dar );
+ 
+     /* removing a block that is not present */
+     r = IShellLinkDataList_RemoveDataBlock( dl, EXP_DARWIN_ID_SIG );
+-    todo_wine ok( r == S_OK, "RemoveDataBlock returned %#lx\n", r );
 +    ok( r == S_OK, "RemoveDataBlock returned %#lx\n", r );
-+    r = IShellLinkDataList_RemoveDataBlock( dl, EXP_SZ_LINK_SIG );
+     r = IShellLinkDataList_RemoveDataBlock( dl, EXP_SZ_LINK_SIG );
+-    todo_wine ok( r == S_OK, "RemoveDataBlock returned %#lx\n", r );
 +    ok( r == S_OK, "RemoveDataBlock returned %#lx\n", r );
-+    r = IShellLinkDataList_RemoveDataBlock( dl, EXP_SZ_ICON_SIG );
+     r = IShellLinkDataList_RemoveDataBlock( dl, EXP_SZ_ICON_SIG );
+-    todo_wine ok( r == S_OK, "RemoveDataBlock returned %#lx\n", r );
 +    ok( r == S_OK, "RemoveDataBlock returned %#lx\n", r );
-+
+ 
      IShellLinkDataList_Release( dl );
      IShellLinkW_Release( sl );
- }
 -- 
 2.47.3
 
