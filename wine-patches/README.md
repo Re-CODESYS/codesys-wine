@@ -25,7 +25,7 @@ This needs no WINE rebuild on the target machine. Only CODESYS uses the patched 
 
 What it does, if you want to do it by hand:
 
-1. Take `ncrypt.dll` and `bcrypt.dll` from a build (Route B), or from a release of this repository once one is published.
+1. Take `ncrypt.dll` and `bcrypt.dll` from the release [crypto-fix-20261002](https://github.com/Re-CODESYS/codesys-wine/releases/tag/crypto-fix-20261002), which comes with `SHA256SUMS`, `BUILD-INFO`, the patches and a tarball of the patched source. `crypto-fix.sh` downloads and verifies it automatically. You can also take them from your own build (Route B).
 2. Copy the `x86_64-windows` versions to `$WINEPREFIX/drive_c/windows/system32/` and the `i386-windows` versions to `.../syswow64/`.
 3. In those copies, overwrite the 16-byte marker `Wine builtin DLL` at file offset `0x40` with any other text. Otherwise WINE recognizes the files as its own builtins and loads its unpatched copy instead (`WINEDLLPATH` doesn't help either).
 4. Set per-application overrides for CODESYS only:
