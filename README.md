@@ -63,7 +63,7 @@ Planned: **agentic help for installation and management**, as an agent skill plu
 ### Known limitations
 
 - **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs two patched DLLs in the prefix, or a [patched WINE](wine-patches/), until WINE itself fixes these gaps. `install.sh` adds them by default. Tested with the simulation and a local Control for Linux SL. Hardware PLCs are not tested yet.
-- **No CodeMeter:** licensed add-ons and USB dongles don't work, and **Application Composer** is skipped because its plug-in is CodeMeter-protected.
+- **CodeMeter only through a native Linux CodeMeter.** `install.sh` adds WIBU's client DLLs, but not the Windows CodeMeter service. Licenses and dongles come from a CodeMeter runtime on Linux; dongles are not tested yet. **Application Composer** is still skipped by `--packages`.
 - **No Windows Gateway or Control Win.** Use a natively running CODESYS Edge Gateway for Linux (tested, installed with Control for Linux SL) instead; see [PLC communication](#plc-communication-control-for-linux-sl).
 - **On stock WINE, packages can't create Start-menu links.** Installing still works if `--cancelOnException` is left off, which `install.sh` does.
 - **Installing add-ons in the CODESYS Installer needs admin rights.** See [the FAQ](#faq).
@@ -112,6 +112,7 @@ install/install.sh [--installer] [--packages] [--full] ~/Downloads/"CODESYS 64 3
 | `--installer` | **CODESYS Installer 2.6.1** (APInstaller) with the .NET 8 Desktop Runtime it needs, both taken from the CODESYS setup. |
 | `--packages` | The **add-on packages bundled with the setup**, as a Windows install would include. They are installed one at a time with `PackageManagerCLI`. This takes about an hour. Application Composer is skipped (CodeMeter). |
 | `--full` | Both. |
+| `--no-codemeter` | Skips the CodeMeter client (see below). It is **on by default**. |
 | `--no-crypto-fix` | Skips the online-login fix (see below). It is **on by default**. |
 | `--crypto-fix-dlls DIR` | Where the patched `ncrypt`/`bcrypt` DLLs are: a release folder or a WINE build tree. |
 | `--yes` | Doesn't ask questions. |
@@ -187,7 +188,11 @@ WINE draws at 96 dpi unless told otherwise, for example under KDE on Wayland wit
 
 #### Can I use my CODESYS license or dongle?
 
-Not yet. CodeMeter isn't installed. A possible route is having the Windows CodeMeter client in WINE talk to a CodeMeter runtime running natively on Linux. That is untested.
+Probably yes, but this is not tested with a dongle yet. `install.sh` installs only WIBU's client DLLs (`WibuCm64.dll`, `WibuCm32.dll`) from the CodeMeter installer bundled in the CODESYS setup. It doesn't install the Windows CodeMeter service. The client talks to a CodeMeter runtime running natively on Linux over TCP port 22350. That runtime handles USB dongles and soft containers. Under WINE, WIBU's `cmu.exe` lists the Linux runtime's containers this way.
+
+You need CodeMeter for Linux: from WIBU, or the "CODESYS CodeMeter for Linux SL" package, which the Deploy Tool installs together with Control for Linux SL. Check it with `install/codemeter-client.sh status`.
+
+The Deploy Tool configures CodeMeter for Linux as a network server on all interfaces (`/etc/wibu/CodeMeter/Server.ini`: `IsNetworkServer=1`, `BindAddress=0.0.0.0`). That offers your licenses to the local network. Change it if you don't want that.
 
 ## Contribution: testing and bug reports
 

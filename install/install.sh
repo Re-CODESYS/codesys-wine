@@ -11,6 +11,8 @@
 #   --full             both of the above
 #   --no-crypto-fix    don't add the patched WINE crypto DLLs for online login
 #                      (see install/crypto-fix.sh; on by default)
+#   --no-codemeter     don't add the CodeMeter client DLLs (see
+#                      install/codemeter-client.sh; on by default)
 #   --crypto-fix-dlls DIR  where the patched DLLs are (default: see crypto-fix.sh)
 #   --yes              don't ask questions
 #   --unsupported-wine try on WINE older than 11 (not supported)
@@ -24,13 +26,14 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-WITH_INSTALLER=0 WITH_PACKAGES=0 CRYPTO_FIX=1 UNSUPPORTED_WINE=0 SETUP_EXE="" FIX_ARGS=()
+WITH_INSTALLER=0 WITH_PACKAGES=0 CRYPTO_FIX=1 CODEMETER=1 UNSUPPORTED_WINE=0 SETUP_EXE="" FIX_ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --installer) WITH_INSTALLER=1 ;;
     --packages) WITH_PACKAGES=1 ;;
     --full) WITH_INSTALLER=1 WITH_PACKAGES=1 ;;
     --no-crypto-fix) CRYPTO_FIX=0 ;;
+    --no-codemeter) CODEMETER=0 ;;
     --crypto-fix-dlls) FIX_ARGS+=(--dlls "$2"); shift ;;
     --yes) FIX_ARGS+=(--yes) ;;
     --unsupported-wine) UNSUPPORTED_WINE=1 ;;
@@ -189,7 +192,22 @@ if [ "$CRYPTO_FIX" = 1 ]; then
   "$HERE/crypto-fix.sh" apply ${FIX_ARGS[@]+"${FIX_ARGS[@]}"}
 fi
 
-# --- 8. Launcher and menu entry ---------------------------------------------
+# --- 8. CodeMeter client (default on) --------------------------------------
+# WIBU's API DLLs only, no Windows CodeMeter service: CODESYS uses the
+# CodeMeter runtime running natively on Linux (dongles, soft licenses).
+if [ "$CODEMETER" = 1 ]; then
+  log "CodeMeter client"
+  CM_MSI="$(ls "$CDS_WORK/$VER/"*CodeMeterRuntime64.msi 2>/dev/null | head -n1)"
+  if [ -z "$CM_MSI" ]; then
+    echo "CodeMeter client: skipped, CodeMeterRuntime64.msi not found in the setup."
+  elif ! command -v 7z >/dev/null; then
+    echo "CodeMeter client: skipped, needs 7z (Debian/Ubuntu package 7zip)."
+  else
+    "$HERE/codemeter-client.sh" apply "$CM_MSI"
+  fi
+fi
+
+# --- 9. Launcher and menu entry ---------------------------------------------
 BIN="$HOME/.local/bin"; APPS="$HOME/.local/share/applications"
 mkdir -p "$BIN" "$APPS"
 printf '@echo off\r\ncd /d %s\\CODESYS\\Common\r\nCODESYS.exe --profile="%s" %%*\r\n' \
