@@ -21,12 +21,22 @@ def decode(data: bytes, key: bytes) -> bytes:
     return x.to_bytes(len(data), 'little').translate(NOT)
 
 
+def overlay_offset(m) -> int:
+    """End of the last PE section, where the appended setup stream begins."""
+    pe = struct.unpack_from('<I', m, 0x3C)[0]
+    nsec, = struct.unpack_from('<H', m, pe + 6)
+    optsize, = struct.unpack_from('<H', m, pe + 20)
+    sec = pe + 24 + optsize
+    return max(sum(struct.unpack_from('<II', m, sec + 40 * i + 16)) for i in range(nsec))
+
+
 def main(src, dst):
     out = Path(dst).resolve()
     out.mkdir(parents=True, exist_ok=True)
     with open(src, 'rb') as f:
         m = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-        pos = m.find(b'ISSetupStream\0', 1300000)
+        # The string also occurs in the stub's code, so search from the overlay.
+        pos = m.find(b'ISSetupStream\0', overlay_offset(m))
         if pos < 0:
             sys.exit('ISSetupStream header not found')
         count, typ = struct.unpack_from('<HI', m, pos + 14)
