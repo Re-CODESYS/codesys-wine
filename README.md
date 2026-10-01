@@ -135,7 +135,7 @@ Online login needs a WINE fix that isn't in a WINE release yet. [wine-patches/](
   - It first explains what it changes and asks.
   - It only acts on a tested WINE version (11.0), and refuses while programs run in the prefix.
   - It keeps a backup of WINE's DLLs. `install/crypto-fix.sh remove` restores them, and `install/crypto-fix.sh status` shows the current state.
-  - It is skipped if no patched DLLs are found. Until a release with the DLLs is published, point it at a [Route B build](wine-patches/) with `--crypto-fix-dlls ~/wine-dev/build`.
+  - It downloads the patched DLLs from the [`crypto-fix-20261002` release](https://github.com/Re-CODESYS/codesys-wine/releases/tag/crypto-fix-20261002) and checks their SHA256. With `--crypto-fix-dlls DIR`, it uses a local folder or a [Route B build](wine-patches/) instead.
 - **Patched WINE build (Route B):** builds WINE master with the patches into `~/wine-dev` and runs it from there. Use it on a copy of your prefix.
 
 [tests/](tests/) has a headless login test.

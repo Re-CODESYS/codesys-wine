@@ -9,7 +9,8 @@
 #   --dlls DIR  where the patched DLLs are. Either a release folder with
 #               x86_64-windows/ and i386-windows/ (and optionally SHA256SUMS),
 #               or a WINE build tree (DIR/dlls/<name>/<arch>-windows/).
-#               Default: $CODESYS_WINE_FIX_DLLS, then ~/wine-dev/build.
+#               Default: $CODESYS_WINE_FIX_DLLS, then ~/wine-dev/build, then
+#               the GitHub release below (downloaded, checksum verified).
 #   --yes       don't ask, just print the explanation and continue
 #   --force     apply on an untested WINE version
 #
@@ -30,6 +31,11 @@ MARKER='Wine builtin DLL'
 REPLACEMENT='codesys-wine fix'
 OVR='HKCU\Software\Wine\AppDefaults\CODESYS.exe\DllOverrides'
 INFO='https://github.com/Re-CODESYS/codesys-wine/tree/main/wine-patches'
+REPO='Re-CODESYS/codesys-wine'
+RELEASE_TAG='crypto-fix-20261002'
+RELEASE_ZIP='codesys-wine-crypto-fix-20261002.zip'
+RELEASE_SHA256='e1110f744fd513e414aad3f77b406ac0a6cccb1e912514da7981e9fda0609dd8'
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/codesys-wine/$RELEASE_TAG"
 
 log() { printf '\n== %s\n' "$*"; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
@@ -73,6 +79,24 @@ src_of() {  # name arch -> path of the patched DLL in $SRC
     [ -f "$f" ] && { echo "$f"; return; }
   done
   return 1
+}
+
+fetch_release() {  # download and unpack the release zip; prints the DLL folder
+  local zip="$CACHE/$RELEASE_ZIP" dir="$CACHE/${RELEASE_ZIP%.zip}"
+  if [ ! -d "$dir" ]; then
+    mkdir -p "$CACHE"
+    if [ ! -f "$zip" ]; then
+      echo "crypto fix: downloading $RELEASE_ZIP from github.com/$REPO" >&2
+      if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
+        gh release download "$RELEASE_TAG" -R "$REPO" -p "$RELEASE_ZIP" -D "$CACHE" >&2 || return 1
+      else
+        curl -fsSL -o "$zip.part" "https://github.com/$REPO/releases/download/$RELEASE_TAG/$RELEASE_ZIP" && mv "$zip.part" "$zip" || return 1
+      fi
+    fi
+    echo "$RELEASE_SHA256  $zip" | sha256sum --quiet -c - || { rm -f "$zip"; die "checksum mismatch for $RELEASE_ZIP"; }
+    python3 -c 'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$zip" "$CACHE"
+  fi
+  echo "$dir"
 }
 
 sysdir_of() { [ "$1" = x86_64 ] && echo "$WINEPREFIX/drive_c/windows/system32" || echo "$WINEPREFIX/drive_c/windows/syswow64"; }
@@ -122,6 +146,9 @@ apply() {
     return 0
   fi
   local n a s
+  if ! src_of ncrypt x86_64 >/dev/null; then
+    SRC="$(fetch_release)" || { echo "crypto fix: skipped, could not get the patched DLLs (see $INFO)."; return 0; }
+  fi
   for n in "${DLLS[@]}"; do for a in x86_64 i386; do
     s="$(src_of $n $a)" || { echo "crypto fix: skipped, patched DLLs not found in $SRC (see $INFO)."; return 0; }
   done; done
