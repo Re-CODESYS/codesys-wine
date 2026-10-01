@@ -45,7 +45,7 @@ More screenshots are welcome (build output, Visualization editor, online login).
 | V3.5 SP22 Patch 4 (3.5.22.40) | winehq-stable 11.0 | Debian 13 (trixie), x86-64 | IDE, build, 43 bundled packages, CODESYS Installer |
 | V3.5 SP22 Patch 1 (3.5.22.10) | winehq-stable 11.0 | Debian 13 (trixie), x86-64 | IDE, build |
 | V3.5 SP22 Patch 4 (3.5.22.40) | WINE master 11.18 + [wine-patches](wine-patches/) | Debian 13 (trixie), x86-64 | Also **simulation login**, and package installs including Start-menu links |
-| V3.5 SP22 Patch 4 (3.5.22.40) | winehq-stable 11.0 + patched `ncrypt.dll`/`bcrypt.dll` ([drop-in](wine-patches/#route-a-drop-in-dlls-for-stock-winehq-stable-110)) | Debian 13 (trixie), x86-64 | Also **simulation login** (in the GUI), and **encrypted, authenticated login to CODESYS Control for Linux SL 4.22** running natively on the same machine (Edge Gateway for Linux 4.22) |
+| V3.5 SP22 Patch 4 (3.5.22.40) | winehq-stable 11.0 + patched `ncrypt.dll`/`bcrypt.dll` ([drop-in](wine-patches/#route-a-drop-in-dlls-for-stock-winehq-stable-110)) | Debian 13 (trixie), x86-64 | Also **simulation login** (in the GUI), and **encrypted, authenticated login to CODESYS Control for Linux SL 4.22** running natively on the same machine (Edge Gateway for Linux 4.22). **CodeMeter dongles** via a native Linux CodeMeter: the License Manager lists them, and the licensed **Git** add-on finds its license |
 
 The test machine is an Intel i7-7500U laptop with Intel HD 620 graphics, running KDE Plasma on Wayland. Ubuntu and older WINE versions are not tested yet; reports are welcome.
 
@@ -56,6 +56,7 @@ The test machine is an Intel i7-7500U laptop with Intel HD 620 graphics, running
 - All add-on packages bundled with the setup (`--packages`), including Scripting, Visualization and its **Visual Style Editor** and **HTML5 Control Editor**.
 - **CODESYS Installer 2.6.1** (`--installer`), for listing installations and installing add-ons.
 - Several CODESYS versions side by side in one prefix.
+- **CodeMeter licenses and USB dongles** through CodeMeter for Linux, including licensed add-ons such as Git and Profiler.
 - With patched WINE, or two patched DLLs dropped into the prefix (done by default): **online login** to the simulation and to **CODESYS Control for Linux SL**.
 
 Planned: **agentic help for installation and management**, as an agent skill plus tools, so an AI assistant like Claude can install, update, diagnose and maintain CODESYS-on-WINE setups for you.
@@ -63,7 +64,7 @@ Planned: **agentic help for installation and management**, as an agent skill plu
 ### Known limitations
 
 - **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs two patched DLLs in the prefix, or a [patched WINE](wine-patches/), until WINE itself fixes these gaps. `install.sh` adds them by default. Tested with the simulation and a local Control for Linux SL. Hardware PLCs are not tested yet.
-- **CodeMeter only through a native Linux CodeMeter.** `install.sh` adds WIBU's client DLLs, but not the Windows CodeMeter service. Licenses and dongles come from a CodeMeter runtime on Linux; dongles are not tested yet. **Application Composer** is still skipped by `--packages`.
+- **CodeMeter only through a native Linux CodeMeter.** `install.sh` adds WIBU's client DLLs, but not the Windows CodeMeter service. Licenses and dongles come from a CodeMeter runtime on Linux. This was tested with USB dongles and licensed add-ons (Git, Profiler). **Application Composer** uses a different licensing model and is still skipped by `--packages`.
 - **No Windows Gateway or Control Win.** Use a natively running CODESYS Edge Gateway for Linux (tested, installed with Control for Linux SL) instead; see [PLC communication](#plc-communication-control-for-linux-sl).
 - **On stock WINE, packages can't create Start-menu links.** Installing still works if `--cancelOnException` is left off, which `install.sh` does.
 - **Installing add-ons in the CODESYS Installer needs admin rights.** See [the FAQ](#faq).
@@ -190,7 +191,7 @@ Set WINE's DPI in the CODESYS prefix: `winecfg` > **Graphics** > **Screen resolu
 
 #### Can I use my CODESYS license or dongle?
 
-Probably yes, but this is not tested with a dongle yet. `install.sh` installs only WIBU's client DLLs (`WibuCm64.dll`, `WibuCm32.dll`) from the CodeMeter installer bundled in the CODESYS setup. It doesn't install the Windows CodeMeter service. The client talks to a CodeMeter runtime running natively on Linux over TCP port 22350. That runtime handles USB dongles and soft containers. Under WINE, WIBU's `cmu.exe` lists the Linux runtime's containers this way.
+Yes, through a CodeMeter runtime on Linux. This was tested with two CmDongles: the License Manager lists their licenses, and the licensed Git add-on (Professional Developer Edition) reports "A valid license has been found". `install.sh` installs only WIBU's client DLLs (`WibuCm64.dll`, `WibuCm32.dll`) from the CodeMeter installer bundled in the CODESYS setup. It doesn't install the Windows CodeMeter service. The client talks to a CodeMeter runtime running natively on Linux over TCP port 22350. That runtime handles USB dongles and soft containers. Under WINE, WIBU's `cmu.exe` lists the Linux runtime's containers this way.
 
 You need CodeMeter for Linux: from WIBU, or the "CODESYS CodeMeter for Linux SL" package, which the Deploy Tool installs together with Control for Linux SL. Check it with `install/codemeter-client.sh status`.
 
