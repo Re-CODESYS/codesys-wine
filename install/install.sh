@@ -102,6 +102,10 @@ done
 wine regsvr32 /s oleaut32.dll
 wine 'C:\windows\syswow64\regsvr32.exe' /s oleaut32.dll
 wine reg add 'HKCU\Software\Microsoft\Avalon.Graphics' /v DisableHWAcceleration /t REG_DWORD /d 1 /f >/dev/null
+# Don't let WINE's menu builder copy every Windows shortcut (CODESYS, its
+# editors, Gateway, Control Win, ...) into the Linux menu; install.sh creates
+# its own launchers and menu entries instead.
+wine reg add 'HKCU\Software\Wine\DllOverrides' /v winemenubuilder.exe /t REG_SZ /d '' /f >/dev/null
 
 # --- 3. Extract the MSI from the InstallShield EXE --------------------------
 MSI="$CDS_WORK/$VER/CODESYS 64 $VER.msi"
