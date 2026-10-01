@@ -1,11 +1,11 @@
 # WINE patches for CODESYS
 
-These patches fix WINE gaps that break CODESYS V3.5. They're written against WINE master and are meant to go upstream. Once WINE ships them, this directory only needs to say which WINE version to use.
+These patches fix WINE gaps that break CODESYS V3.5. They are written against WINE master and are meant to go upstream (not submitted yet). Once WINE ships them, this directory only needs to say which WINE version to use.
 
 | Patch | Fixes | Upstream |
 |---|---|---|
-| `0001-ncrypt-…` | **Online login** (Simulation, very likely real PLCs too): `Unknown error "-2146893783"` (`0x80090029 NTE_NOT_SUPPORTED`). `NCryptEncrypt` refused RSA OAEP padding, and `NCryptDecrypt` was a stub. | MR pending |
-| `0002-shell32-…` | **Package install** aborting at `Link: ….exe` with "The method or operation is not implemented" (for example Visualization 4.10). `IShellLinkDataList::RemoveDataBlock` was a stub. | MR pending |
+| `0001-ncrypt-…` | **Online login** (Simulation, very likely real PLCs too): `Unknown error "-2146893783"` (`0x80090029 NTE_NOT_SUPPORTED`). `NCryptEncrypt` refused RSA OAEP padding, and `NCryptDecrypt` was a stub. | not yet submitted |
+| `0002-shell32-…` | **Package install** aborting at `Link: ….exe` with "The method or operation is not implemented" (for example Visualization 4.10). `IShellLinkDataList::RemoveDataBlock` was a stub. | not yet submitted |
 
 Both patches include WINE conformance tests (`dlls/ncrypt/tests`, `dlls/shell32/tests`). These pass on WINE in 32-bit and 64-bit.
 
