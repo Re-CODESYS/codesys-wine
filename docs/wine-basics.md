@@ -88,7 +88,7 @@ WINE scales all windows and fonts by its **DPI setting**. The default is 96 dpi 
 ## PLC communication
 
 - There's no Windows Gateway service in the prefix. Use the **native Linux** CODESYS Edge Gateway (or the Gateway of CODESYS Control for Linux), and add it in CODESYS as `localhost`, port `1217`, or by IP for another machine.
-- Licensing: CodeMeter runs natively on Linux; see the README.
+- Licensing: `install.sh` adds only WIBU's client DLLs (`WibuCm64.dll`, `WibuCm32.dll`). The CodeMeter runtime itself runs natively on Linux and serves dongles and soft containers over TCP port 22350. Check with `install/codemeter-client.sh status`, and see the README FAQ.
 
 ## Logs and when something goes wrong
 

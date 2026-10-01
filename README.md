@@ -93,6 +93,8 @@ Distribution WINE packages stay on old versions for years. WineHQ's own packages
 
 Plan: when WINE 12.0 is released (expected January 2027), the baseline moves to WINE 12. If WINE has fixed the ncrypt and shell32 gaps by then (they are reported to WineHQ as bugs), the crypto fix is removed.
 
+New to WINE? [docs/wine-basics.md](docs/wine-basics.md) covers the prefix, starting and stopping, backups, HiDPI, paths and logs.
+
 ### What install.sh does
 
 ```sh
@@ -184,7 +186,7 @@ WINE starts programs as a limited administrator. Click **Restart as Administrato
 
 #### The CODESYS window is tiny on a HiDPI screen
 
-WINE draws at 96 dpi unless told otherwise, for example under KDE on Wayland with 150 % scaling, when Xwayland is set to let applications scale themselves. Set WINE's DPI in the CODESYS prefix: `winecfg` > **Graphics** > **Screen resolution**, 120 for 125 % or 144 for 150 %. Then restart CODESYS.
+Set WINE's DPI in the CODESYS prefix: `winecfg` > **Graphics** > **Screen resolution**, 120 for 125 % or 144 for 150 %. Details are in [docs/wine-basics.md](docs/wine-basics.md).
 
 #### Can I use my CODESYS license or dongle?
 
