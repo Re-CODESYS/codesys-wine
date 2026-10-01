@@ -57,6 +57,8 @@ The test machine is an Intel i7-7500U laptop with Intel HD 620 graphics, running
 - Several CODESYS versions side by side in one prefix.
 - With the patched WINE: **online login to the simulation**.
 
+Planned: **agentic help for installation and management**, as an agent skill plus tools, so an AI assistant like Claude can install, update, diagnose and maintain CODESYS-on-WINE setups for you.
+
 ### Known limitations
 
 - **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs the [patched WINE](wine-patches/) until the fix is in a WINE release. Real PLCs are not tested yet.
