@@ -1,0 +1,163 @@
+From ee535f4e124e2306033c55059f55810dd6099ff0 Mon Sep 17 00:00:00 2001
+From: Struccc <184474500+Struccc@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 20:30:52 +0700
+Subject: [PATCH 1/2] ncrypt: Support OAEP and no padding in NCryptEncrypt and
+ implement NCryptDecrypt.
+
+---
+ dlls/ncrypt/main.c         | 25 +++++++++-----
+ dlls/ncrypt/tests/ncrypt.c | 71 ++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 84 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/ncrypt/main.c b/dlls/ncrypt/main.c
+index 03ff94e..da89c0b 100644
+--- a/dlls/ncrypt/main.c
++++ b/dlls/ncrypt/main.c
+@@ -243,9 +243,22 @@ SECURITY_STATUS WINAPI NCryptCreatePersistedKey(NCRYPT_PROV_HANDLE provider, NCR
+ SECURITY_STATUS WINAPI NCryptDecrypt(NCRYPT_KEY_HANDLE key, BYTE *input, DWORD insize, void *padding,
+                                      BYTE *output, DWORD outsize, DWORD *result, DWORD flags)
+ {
+-    FIXME("(%#Ix, %p, %lu, %p, %p, %lu, %p, %#lx): stub\n", key, input, insize, padding,
++    struct object *key_object = (struct object *)key;
++
++    TRACE("(%#Ix, %p, %lu, %p, %p, %lu, %p, %#lx)\n", key, input, insize, padding,
+           output, outsize, result, flags);
+-    return NTE_NOT_SUPPORTED;
++
++    if (flags & ~(NCRYPT_NO_PADDING_FLAG | NCRYPT_PAD_OAEP_FLAG
++                | NCRYPT_PAD_PKCS1_FLAG | NCRYPT_SILENT_FLAG))
++    {
++        FIXME("Flags %lx not supported\n", flags);
++        return NTE_BAD_FLAGS;
++    }
++
++    if (key_object->type != KEY) return NTE_INVALID_HANDLE;
++
++    return map_ntstatus(BCryptDecrypt(key_object->key.bcrypt_key, input, insize, padding,
++                                      NULL, 0, output, outsize, result, flags & ~NCRYPT_SILENT_FLAG));
+ }
+ 
+ SECURITY_STATUS WINAPI NCryptDeleteKey(NCRYPT_KEY_HANDLE key, DWORD flags)
+@@ -269,16 +282,10 @@ SECURITY_STATUS WINAPI NCryptEncrypt(NCRYPT_KEY_HANDLE key, BYTE *input, DWORD i
+         return NTE_BAD_FLAGS;
+     }
+ 
+-    if (flags & NCRYPT_NO_PADDING_FLAG || flags & NCRYPT_PAD_OAEP_FLAG)
+-    {
+-        FIXME("No padding and oaep padding not supported\n");
+-        return NTE_NOT_SUPPORTED;
+-    }
+-
+     if (key_object->type != KEY) return NTE_INVALID_HANDLE;
+ 
+     return map_ntstatus(BCryptEncrypt(key_object->key.bcrypt_key, input, insize, padding,
+-                                      NULL, 0, output, outsize, result, flags));
++                                      NULL, 0, output, outsize, result, flags & ~NCRYPT_SILENT_FLAG));
+ }
+ 
+ SECURITY_STATUS WINAPI NCryptEnumAlgorithms(NCRYPT_PROV_HANDLE provider, DWORD alg_ops,
+diff --git a/dlls/ncrypt/tests/ncrypt.c b/dlls/ncrypt/tests/ncrypt.c
+index 53da3dc..b695783 100644
+--- a/dlls/ncrypt/tests/ncrypt.c
++++ b/dlls/ncrypt/tests/ncrypt.c
+@@ -765,8 +765,6 @@ static void test_NCryptEncrypt(void)
+     ok(ret == NTE_BAD_FLAGS, "got %lx\n", ret);
+ 
+     /* Test no padding with RSA */
+-    todo_wine
+-    {
+     ret = NCryptEncrypt(key, data_to_encrypt, sizeof(data_to_encrypt), NULL, NULL, 0, &output_size,
+                         NCRYPT_NO_PADDING_FLAG);
+     ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
+@@ -777,7 +775,6 @@ static void test_NCryptEncrypt(void)
+                         &output_size, NCRYPT_NO_PADDING_FLAG);
+     ok(ret == NTE_INVALID_PARAMETER, "got %lx\n", ret);
+     free(output_a);
+-    }
+ 
+     /* Test output RSA with PKCS1. PKCS1 should append a random padding to the data, so the output should be different
+      * with each call. */
+@@ -809,6 +806,73 @@ static void test_NCryptEncrypt(void)
+     NCryptFreeObject(prov);
+ }
+ 
++static void test_NCryptDecrypt(void)
++{
++    static const WCHAR *hash_algs[] = { BCRYPT_SHA1_ALGORITHM, BCRYPT_SHA256_ALGORITHM };
++    BCRYPT_OAEP_PADDING_INFO oaep;
++    NCRYPT_PROV_HANDLE prov;
++    NCRYPT_KEY_HANDLE key;
++    SECURITY_STATUS ret;
++    BYTE encrypted[128], decrypted[128];
++    DWORD size;
++    unsigned int i;
++
++    NCryptOpenStorageProvider(&prov, NULL, 0);
++    NCryptCreatePersistedKey(prov, &key, BCRYPT_RSA_ALGORITHM, NULL, 0, 0);
++    NCryptFinalizeKey(key, 0);
++
++    /* Test decrypt with invalid key handle */
++    ret = NCryptDecrypt(prov, encrypted, sizeof(encrypted), NULL, NULL, 0, &size, NCRYPT_PAD_PKCS1_FLAG);
++    ok(ret == NTE_INVALID_HANDLE, "got %lx\n", ret);
++
++    /* Test decrypt with invalid flags */
++    ret = NCryptDecrypt(key, encrypted, sizeof(encrypted), NULL, NULL, 0, &size, 51342);
++    ok(ret == NTE_BAD_FLAGS, "got %lx\n", ret);
++
++    /* PKCS1 round trip */
++    ret = NCryptEncrypt(key, data_to_encrypt, sizeof(data_to_encrypt), NULL, encrypted, sizeof(encrypted),
++                        &size, NCRYPT_PAD_PKCS1_FLAG);
++    ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
++    ok(size == 128, "got %ld\n", size);
++
++    memset(decrypted, 0, sizeof(decrypted));
++    ret = NCryptDecrypt(key, encrypted, size, NULL, decrypted, sizeof(decrypted), &size, NCRYPT_PAD_PKCS1_FLAG);
++    ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
++    ok(size == sizeof(data_to_encrypt), "got %ld\n", size);
++    ok(!memcmp(decrypted, data_to_encrypt, sizeof(data_to_encrypt)), "data mismatch\n");
++
++    /* OAEP round trip, NULL label as used by .NET RSACng */
++    for (i = 0; i < ARRAY_SIZE(hash_algs); i++)
++    {
++        winetest_push_context("%s", wine_dbgstr_w(hash_algs[i]));
++        oaep.pszAlgId = hash_algs[i];
++        oaep.pbLabel = NULL;
++        oaep.cbLabel = 0;
++
++        size = 0;
++        ret = NCryptEncrypt(key, data_to_encrypt, sizeof(data_to_encrypt), &oaep, NULL, 0, &size,
++                            NCRYPT_PAD_OAEP_FLAG);
++        ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
++        ok(size == 128, "got %ld\n", size);
++
++        ret = NCryptEncrypt(key, data_to_encrypt, sizeof(data_to_encrypt), &oaep, encrypted, sizeof(encrypted),
++                            &size, NCRYPT_PAD_OAEP_FLAG | NCRYPT_SILENT_FLAG);
++        ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
++        ok(size == 128, "got %ld\n", size);
++
++        memset(decrypted, 0, sizeof(decrypted));
++        ret = NCryptDecrypt(key, encrypted, size, &oaep, decrypted, sizeof(decrypted), &size,
++                            NCRYPT_PAD_OAEP_FLAG | NCRYPT_SILENT_FLAG);
++        ok(ret == ERROR_SUCCESS, "got %lx\n", ret);
++        ok(size == sizeof(data_to_encrypt), "got %ld\n", size);
++        ok(!memcmp(decrypted, data_to_encrypt, sizeof(data_to_encrypt)), "data mismatch\n");
++        winetest_pop_context();
++    }
++
++    NCryptFreeObject(key);
++    NCryptFreeObject(prov);
++}
++
+ static void test_NCryptExportKey(void)
+ {
+     NCRYPT_PROV_HANDLE prov;
+@@ -851,5 +915,6 @@ START_TEST(ncrypt)
+     test_verify_signature();
+     test_NCryptIsAlgSupported();
+     test_NCryptEncrypt();
++    test_NCryptDecrypt();
+     test_NCryptExportKey();
+ }
+-- 
+2.47.3
+

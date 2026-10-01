@@ -1,0 +1,8 @@
+The *.patch files in this directory are modifications of WINE
+(https://gitlab.winehq.org/wine/wine) and are licensed under the
+GNU Lesser General Public License, version 2.1 or (at your option)
+any later version, the same license as WINE itself:
+https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+build-wine.sh and README.md in this directory are covered by the
+repository's MIT license (../LICENSE).

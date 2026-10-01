@@ -10,13 +10,16 @@ Run the **CODESYS V3.5 Development System** (64-bit IDE) on Linux with WINE.
 |---|---|---|---|
 | V3.5 SP22 Patch 4 (3.5.22.40) | winehq-stable 11.0 | Debian 13 (trixie), x86-64 | IDE starts; a project builds with 0 errors |
 | V3.5 SP22 Patch 1 (3.5.22.10) | winehq-stable 11.0 | Debian 13 (trixie), x86-64 | IDE starts; a project builds with 0 errors |
+| V3.5 SP22 Patch 4 (3.5.22.40) | WINE master 11.18 + [wine-patches](wine-patches/) | Debian 13 (trixie), x86-64 | Simulation login works; Visualization 4.10 installs including its start-menu links |
 
 | Feature | State |
 |---|---|
 | Editors, project handling, compile | Works |
-| Online login (simulation, and very likely real PLCs) | **Fails** with `Unknown error "-2146893783"` (0x80090029), caused by a WINE ncrypt gap. See [docs/known-issues.md](docs/known-issues.md) |
+| Online login (simulation, and very likely real PLCs) | **Fails on stock WINE** with `Unknown error "-2146893783"` (0x80090029), caused by a WINE ncrypt gap. **Works with [patched WINE](wine-patches/)** (simulation tested; real PLCs not yet). See [docs/troubleshooting.md](docs/troubleshooting.md) |
 | CodeMeter licensing, USB dongles | Not installed |
-| CODESYS Installer 2.6.1, add-on packages incl. Visualization 4.10 and its editors | Works (`--installer`, `--packages`). Start-menu links for the editors aren't created. |
+| CODESYS Installer 2.6.1, add-on packages incl. Visualization 4.10 and its editors | Works (`--installer`, `--packages`). On stock WINE, start-menu links for the editors aren't created. With [patched WINE](wine-patches/), `PackageManagerCLI --cancelOnException` works and the links are created. |
+
+The WINE fixes are being submitted upstream. Until they land in a WINE release, [wine-patches/](wine-patches/) builds a patched WINE that runs in place, and [tests/](tests/) has a headless login test. To diagnose other failures, see [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ## Requirements
 

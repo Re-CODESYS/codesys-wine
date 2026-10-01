@@ -1,0 +1,75 @@
+From 599e98a42fdf66922c14a0715c0071ebfe028146 Mon Sep 17 00:00:00 2001
+From: Struccc <184474500+Struccc@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 21:04:59 +0700
+Subject: [PATCH 2/2] shell32: Implement IShellLinkDataList::RemoveDataBlock().
+
+---
+ dlls/shell32/shelllink.c       | 19 +++++++++++++++++--
+ dlls/shell32/tests/shelllink.c | 21 +++++++++++++++++++++
+ 2 files changed, 38 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/shell32/shelllink.c b/dlls/shell32/shelllink.c
+index 61d0eaa..4c6c538 100644
+--- a/dlls/shell32/shelllink.c
++++ b/dlls/shell32/shelllink.c
+@@ -2244,8 +2244,23 @@ ShellLink_CopyDataBlock( IShellLinkDataList* iface, DWORD dwSig, void** ppDataBl
+ static HRESULT WINAPI
+ ShellLink_RemoveDataBlock( IShellLinkDataList* iface, DWORD dwSig )
+ {
+-    FIXME("(%p)->(%lu): stub\n", iface, dwSig);
+-    return E_NOTIMPL;
++    IShellLinkImpl *This = impl_from_IShellLinkDataList(iface);
++
++    TRACE("(%p)->(%08lx)\n", This, dwSig);
++
++    switch (dwSig)
++    {
++    case EXP_DARWIN_ID_SIG:
++        free(This->sComponent);
++        This->sComponent = NULL;
++        This->bDirty = TRUE;
++        break;
++    default:
++        /* blocks we don't store have nothing to remove */
++        FIXME("unhandled datablock %08lx\n", dwSig);
++        break;
++    }
++    return S_OK;
+ }
+ 
+ static HRESULT WINAPI
+diff --git a/dlls/shell32/tests/shelllink.c b/dlls/shell32/tests/shelllink.c
+index e80a849..9a3b66b 100644
+--- a/dlls/shell32/tests/shelllink.c
++++ b/dlls/shell32/tests/shelllink.c
+@@ -918,6 +918,27 @@ if (0)
+ 
+     LocalFree( dar );
+ 
++    r = IShellLinkDataList_RemoveDataBlock( dl, EXP_DARWIN_ID_SIG );
++    ok( r == S_OK, "RemoveDataBlock failed, hr %#lx.\n", r );
++
++    flags = 0;
++    r = IShellLinkDataList_GetFlags( dl, &flags );
++    ok( r == S_OK, "GetFlags failed\n");
++    ok( !(flags & SLDF_HAS_DARWINID), "got flags %#lx\n", flags );
++
++    dar = (void*)-1;
++    r = IShellLinkDataList_CopyDataBlock( dl, EXP_DARWIN_ID_SIG, (LPVOID*) &dar );
++    ok( r == E_FAIL, "CopyDataBlock returned %#lx\n", r );
++    ok( dar == NULL, "should be null\n");
++
++    /* removing a block that is not present */
++    r = IShellLinkDataList_RemoveDataBlock( dl, EXP_DARWIN_ID_SIG );
++    ok( r == S_OK, "RemoveDataBlock returned %#lx\n", r );
++    r = IShellLinkDataList_RemoveDataBlock( dl, EXP_SZ_LINK_SIG );
++    ok( r == S_OK, "RemoveDataBlock returned %#lx\n", r );
++    r = IShellLinkDataList_RemoveDataBlock( dl, EXP_SZ_ICON_SIG );
++    ok( r == S_OK, "RemoveDataBlock returned %#lx\n", r );
++
+     IShellLinkDataList_Release( dl );
+     IShellLinkW_Release( sl );
+ }
+-- 
+2.47.3
+
