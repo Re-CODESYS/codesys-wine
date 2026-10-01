@@ -19,7 +19,7 @@ Run the **CODESYS V3.5 Development System** (64-bit IDE) on Linux with WINE.
 | CodeMeter licensing, USB dongles | Not installed |
 | CODESYS Installer 2.6.1, add-on packages incl. Visualization 4.10 and its editors | Works (`--installer`, `--packages`). On stock WINE, start-menu links for the editors aren't created. With [patched WINE](wine-patches/), `PackageManagerCLI --cancelOnException` works and the links are created. |
 
-The WINE fixes are being submitted upstream. Until they land in a WINE release, [wine-patches/](wine-patches/) builds a patched WINE that runs in place, and [tests/](tests/) has a headless login test. To diagnose other failures, see [docs/troubleshooting.md](docs/troubleshooting.md).
+The WINE fixes are not yet submitted upstream. Until they land in a WINE release, [wine-patches/](wine-patches/) builds a patched WINE that runs in place, and [tests/](tests/) has a headless login test. To diagnose other failures, see [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ## Requirements
 
