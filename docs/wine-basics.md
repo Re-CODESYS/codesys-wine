@@ -28,6 +28,7 @@ WINE keeps a complete, separate Windows environment in a folder called a **prefi
 |---|---|
 | Start CODESYS | menu entry, or `~/.local/bin/codesys-3.5.22.40` |
 | Start the CODESYS Installer | `~/.local/bin/codesys-installer…` |
+| Launchers for a non-default prefix | get the prefix name as suffix, e.g. `codesys-3.5.22.40-codesys-sp22`. `ls ~/.local/bin/codesys-*` lists them. |
 | CODESYS hangs, or a dialog is stuck | `WINEPREFIX=… wineserver -k`. Kills **all** Windows programs in that prefix (only that prefix). Unsaved work is lost. |
 | Wait until everything in the prefix has exited | `WINEPREFIX=… wineserver -w` |
 | WINE's own settings window | `WINEPREFIX=… winecfg` |
