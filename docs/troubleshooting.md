@@ -1,8 +1,8 @@
 # Troubleshooting
 
-## Known errors
-
 New to WINE? Start with [wine-basics.md](wine-basics.md): prefixes, starting and stopping, screen scaling, paths, updates.
+
+## Known errors
 
 | Symptom | Cause | Fix |
 |---|---|---|
