@@ -2,7 +2,7 @@
 
 These patches fix WINE gaps that break CODESYS V3.5. They are written against WINE master.
 
-> **Origin and upstream status.** The patches were written with an AI assistant (Claude). WineHQ doesn't accept LLM-generated contributions ([policy](https://gitlab.winehq.org/winehq/winehq/-/wikis/home), "No LLM-generated code"), so they are **not submitted to WINE** and must not be. Upstream, the two problems are reported as WINE bugs instead, written by a human, with traces and the code locations, so WINE developers can fix them. Once a WINE release fixes them, this directory only needs to say which WINE version to use. The copyright status of AI-generated code is unclear, and that also applies to these patches and to the DLLs built from them. They are offered under WINE's license, LGPL-2.1-or-later, with that caveat.
+> **Origin and upstream status.** The patches were written with an AI assistant (Claude). WineHQ's contributor policy doesn't accept LLM-generated contributions ([policy](https://gitlab.winehq.org/winehq/winehq/-/wikis/home), "No LLM-generated code"), so they are **not submitted to WINE** and must not be. Upstream, the two problems are reported as WINE bugs instead, written by a human, with traces and the code locations, so WINE developers can fix them. Once a WINE release fixes them, this directory only needs to say which WINE version to use.
 
 | Patches | Fixes | Upstream WINE bug |
 |---|---|---|
