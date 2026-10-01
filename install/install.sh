@@ -9,6 +9,10 @@
 #   --packages         also install the add-on packages bundled with the setup,
 #                      as the Windows setup does (slow: about an hour)
 #   --full             both of the above
+#   --no-crypto-fix    don't add the patched WINE crypto DLLs for online login
+#                      (see install/crypto-fix.sh; on by default)
+#   --crypto-fix-dlls DIR  where the patched DLLs are (default: see crypto-fix.sh)
+#   --yes              don't ask questions
 #
 # Environment overrides:
 #   WINEPREFIX   prefix to create/use   (default ~/.local/share/wineprefixes/codesys)
@@ -19,17 +23,21 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-WITH_INSTALLER=0 WITH_PACKAGES=0 SETUP_EXE=""
-for a in "$@"; do
-  case "$a" in
+WITH_INSTALLER=0 WITH_PACKAGES=0 CRYPTO_FIX=1 SETUP_EXE="" FIX_ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
     --installer) WITH_INSTALLER=1 ;;
     --packages) WITH_PACKAGES=1 ;;
     --full) WITH_INSTALLER=1 WITH_PACKAGES=1 ;;
-    -*) echo "unknown option: $a" >&2; exit 1 ;;
-    *) SETUP_EXE="$a" ;;
+    --no-crypto-fix) CRYPTO_FIX=0 ;;
+    --crypto-fix-dlls) FIX_ARGS+=(--dlls "$2"); shift ;;
+    --yes) FIX_ARGS+=(--yes) ;;
+    -*) echo "unknown option: $1" >&2; exit 1 ;;
+    *) SETUP_EXE="$1" ;;
   esac
+  shift
 done
-[ -n "$SETUP_EXE" ] || { echo "usage: $0 [--installer] [--packages] [--full] <CODESYS 64 3.5.x.y.exe>" >&2; exit 1; }
+[ -n "$SETUP_EXE" ] || { echo "usage: $0 [--installer] [--packages] [--full] [--no-crypto-fix] <CODESYS 64 3.5.x.y.exe>" >&2; exit 1; }
 export WINEPREFIX="${WINEPREFIX:-$HOME/.local/share/wineprefixes/codesys}"
 export WINEARCH=win64
 export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
@@ -166,7 +174,15 @@ if [ "$WITH_PACKAGES" = 1 ]; then
   [ "${#failed[@]}" = 0 ] || echo "warning: ${#failed[@]} package(s) failed: ${failed[*]}"
 fi
 
-# --- 7. Launcher and menu entry ---------------------------------------------
+# --- 7. Online-login crypto fix (default on) -------------------------------
+# Temporary until the ncrypt/bcrypt patches are in a WINE release; it skips
+# itself on untested WINE versions or when the patched DLLs aren't available.
+if [ "$CRYPTO_FIX" = 1 ]; then
+  log "Online-login crypto fix"
+  "$HERE/crypto-fix.sh" apply ${FIX_ARGS[@]+"${FIX_ARGS[@]}"}
+fi
+
+# --- 8. Launcher and menu entry ---------------------------------------------
 BIN="$HOME/.local/bin"; APPS="$HOME/.local/share/applications"
 mkdir -p "$BIN" "$APPS"
 printf '@echo off\r\ncd /d %s\\CODESYS\\Common\r\nCODESYS.exe --profile="%s" %%*\r\n' \

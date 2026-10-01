@@ -99,6 +99,9 @@ install/install.sh [--installer] [--packages] [--full] ~/Downloads/"CODESYS 64 3
 | `--installer` | **CODESYS Installer 2.6.1** (APInstaller) with the .NET 8 Desktop Runtime it needs, both taken from the CODESYS setup. |
 | `--packages` | The **add-on packages bundled with the setup**, as a Windows install would include. They are installed one at a time with `PackageManagerCLI`. This takes about an hour. Application Composer is skipped (CodeMeter). |
 | `--full` | Both. |
+| `--no-crypto-fix` | Skips the online-login fix (see below). It is **on by default**. |
+| `--crypto-fix-dlls DIR` | Where the patched `ncrypt`/`bcrypt` DLLs are: a release folder or a WINE build tree. |
+| `--yes` | Doesn't ask questions. |
 
 The script can be re-run safely: finished steps and installed packages are skipped. Running it with another installer version adds that version side by side in the same prefix.
 
@@ -115,7 +118,11 @@ c3d493c2d1df71a539fdb34a31dbaec4e53610ec6a2b817b388b4e1e2a4ba1a9  CODESYS 64 3.5
 
 Online login needs a WINE fix that isn't in a WINE release yet. [wine-patches/](wine-patches/) describes two ways to get it:
 
-- **Drop-in DLLs (Route A):** copy patched `ncrypt.dll` and `bcrypt.dll` into the CODESYS prefix and enable them for `CODESYS.exe` only. Your system WINE (stable 11.0) stays as it is.
+- **Drop-in DLLs (Route A):** copy patched `ncrypt.dll` and `bcrypt.dll` into the CODESYS prefix and enable them for `CODESYS.exe` only. Your system WINE (stable 11.0) stays as it is. `install.sh` does this for you by default, using `install/crypto-fix.sh`:
+  - It first explains what it changes and asks.
+  - It only acts on a tested WINE version (11.0), and refuses while programs run in the prefix.
+  - It keeps a backup of WINE's DLLs. `install/crypto-fix.sh remove` restores them, and `install/crypto-fix.sh status` shows the current state.
+  - It is skipped if no patched DLLs are found. Until a release with the DLLs is published, point it at a [Route B build](wine-patches/) with `--crypto-fix-dlls ~/wine-dev/build`.
 - **Patched WINE build (Route B):** builds WINE master with the patches into `~/wine-dev` and runs it from there. Use it on a copy of your prefix.
 
 [tests/](tests/) has a headless login test.
