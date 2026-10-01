@@ -45,6 +45,7 @@ More screenshots are welcome (build output, Visualization editor, online login).
 | V3.5 SP22 Patch 4 (3.5.22.40) | winehq-stable 11.0 | Debian 13 (trixie), x86-64 | IDE, build, 43 bundled packages, CODESYS Installer |
 | V3.5 SP22 Patch 1 (3.5.22.10) | winehq-stable 11.0 | Debian 13 (trixie), x86-64 | IDE, build |
 | V3.5 SP22 Patch 4 (3.5.22.40) | WINE master 11.18 + [wine-patches](wine-patches/) | Debian 13 (trixie), x86-64 | Also **simulation login**, and package installs including Start-menu links |
+| V3.5 SP22 Patch 4 (3.5.22.40) | winehq-stable 11.0 + patched `ncrypt.dll`/`bcrypt.dll` ([drop-in](wine-patches/#route-a-drop-in-dlls-for-stock-winehq-stable-110)) | Debian 13 (trixie), x86-64 | Also **simulation login** |
 
 The test machine is an Intel i7-7500U laptop with Intel HD 620 graphics, running KDE Plasma on Wayland. Ubuntu and older WINE versions are not tested yet; reports are welcome.
 
@@ -55,13 +56,13 @@ The test machine is an Intel i7-7500U laptop with Intel HD 620 graphics, running
 - All add-on packages bundled with the setup (`--packages`), including Scripting, Visualization and its **Visual Style Editor** and **HTML5 Control Editor**.
 - **CODESYS Installer 2.6.1** (`--installer`), for listing installations and installing add-ons.
 - Several CODESYS versions side by side in one prefix.
-- With the patched WINE: **online login to the simulation**.
+- With patched WINE, or two patched DLLs dropped into the prefix: **online login to the simulation**.
 
 Planned: **agentic help for installation and management**, as an agent skill plus tools, so an AI assistant like Claude can install, update, diagnose and maintain CODESYS-on-WINE setups for you.
 
 ### Known limitations
 
-- **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs the [patched WINE](wine-patches/) until the fix is in a WINE release. Real PLCs are not tested yet.
+- **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs two patched DLLs in the prefix, or a [patched WINE](wine-patches/), until the fix is in a WINE release. Real PLCs are not tested yet.
 - **No CodeMeter:** licensed add-ons and USB dongles don't work, and **Application Composer** is skipped because its plug-in is CodeMeter-protected.
 - **No Windows Gateway or Control Win.** For PLC communication, run CODESYS Control for Linux SL or the Edge Gateway for Linux natively (untested).
 - **On stock WINE, packages can't create Start-menu links.** Installing still works if `--cancelOnException` is left off, which `install.sh` does.
@@ -112,7 +113,12 @@ c3d493c2d1df71a539fdb34a31dbaec4e53610ec6a2b817b388b4e1e2a4ba1a9  CODESYS 64 3.5
 
 ### Online login: patched WINE
 
-Online login needs two small WINE fixes that aren't in a WINE release yet. [wine-patches/](wine-patches/) builds a patched WINE into `~/wine-dev` that runs from there, so your system WINE stays as it is. Use it on a copy of your prefix. [tests/](tests/) has a headless login test.
+Online login needs a WINE fix that isn't in a WINE release yet. [wine-patches/](wine-patches/) describes two ways to get it:
+
+- **Drop-in DLLs (Route A):** copy patched `ncrypt.dll` and `bcrypt.dll` into the CODESYS prefix and enable them for `CODESYS.exe` only. Your system WINE (stable 11.0) stays as it is.
+- **Patched WINE build (Route B):** builds WINE master with the patches into `~/wine-dev` and runs it from there. Use it on a copy of your prefix.
+
+[tests/](tests/) has a headless login test.
 
 ### FAQ
 
@@ -121,12 +127,12 @@ Online login needs two small WINE fixes that aren't in a WINE release yet. [wine
 We don't modify any WINE files. There are two separate things:
 
 1. **The `security.dll` override** (always applied). CODESYS ships a .NET assembly called `Security.dll`. WINE has its own built-in Windows DLL with the same name, and by default WINE loads its own. CODESYS then fails with `BadImageFormatException`. The override is a registry setting in the CODESYS prefix: `*security=native` under `AppDefaults\<program>.exe`. It tells WINE to load the CODESYS file instead, and only for the listed CODESYS programs. A global override would break other programs, so the script sets it per program.
-2. **The WINE patches** (optional, for online login). Two WINE functions were missing. `NCryptEncrypt` refused the RSA-OAEP padding CODESYS uses to encrypt the login, and `IShellLinkDataList::RemoveDataBlock` was a stub. The patches add them to a separately built WINE that runs from a folder in your home directory.
+2. **The WINE patches** (optional, for online login). Two WINE functions were missing. `NCryptEncrypt` refused the RSA-OAEP padding CODESYS uses to encrypt the login, and `IShellLinkDataList::RemoveDataBlock` was a stub. You either drop two patched DLLs into the CODESYS prefix, used by `CODESYS.exe` only, or build a separate patched WINE that runs from a folder in your home directory.
 
 #### Is it safe?
 
 - The override applies only inside the CODESYS prefix and only to CODESYS programs. Deleting the prefix removes it.
-- The patched WINE doesn't replace or change the system WINE. The patches are short and readable, and they include WINE's own conformance tests. Read them in [wine-patches/](wine-patches/).
+- Neither the drop-in DLLs nor the patched WINE build replace or change the system WINE. The drop-in DLLs live inside the prefix and are only used by `CODESYS.exe`. The patches are short and readable, and they include WINE's own conformance tests. Read them in [wine-patches/](wine-patches/).
 - A WINE prefix is **not a sandbox**. Windows programs in it can read and write your home directory, just like with any WINE setup.
 - Nothing in `install.sh` needs `sudo` or admin rights. Building the patched WINE needs `sudo` once, for the build dependencies.
 
@@ -137,7 +143,7 @@ No. CODESYS GmbH supports Windows only, and the WINE patches aren't upstream yet
 #### Which WINE version do I need?
 
 - **WINE 11.0** (stable) for the IDE, building and packages.
-- **WINE 11.5 or newer plus the patches** for online login. 11.0 lacks a bcrypt fix that the ncrypt patch builds on.
+- For online login, either **WINE 11.0 plus the drop-in `ncrypt.dll` and `bcrypt.dll`** (both built from WINE master with the patches; the bcrypt one brings a fix that 11.0 lacks), or **a WINE 11.5 or newer build with the patches**.
 
 #### Why does the CODESYS Installer say "Read-Only Mode"?
 
