@@ -13,6 +13,7 @@
 #                      (see install/crypto-fix.sh; on by default)
 #   --crypto-fix-dlls DIR  where the patched DLLs are (default: see crypto-fix.sh)
 #   --yes              don't ask questions
+#   --unsupported-wine try on WINE older than 11 (not supported)
 #
 # Environment overrides:
 #   WINEPREFIX   prefix to create/use   (default ~/.local/share/wineprefixes/codesys)
@@ -23,7 +24,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-WITH_INSTALLER=0 WITH_PACKAGES=0 CRYPTO_FIX=1 SETUP_EXE="" FIX_ARGS=()
+WITH_INSTALLER=0 WITH_PACKAGES=0 CRYPTO_FIX=1 UNSUPPORTED_WINE=0 SETUP_EXE="" FIX_ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --installer) WITH_INSTALLER=1 ;;
@@ -32,6 +33,7 @@ while [ $# -gt 0 ]; do
     --no-crypto-fix) CRYPTO_FIX=0 ;;
     --crypto-fix-dlls) FIX_ARGS+=(--dlls "$2"); shift ;;
     --yes) FIX_ARGS+=(--yes) ;;
+    --unsupported-wine) UNSUPPORTED_WINE=1 ;;
     -*) echo "unknown option: $1" >&2; exit 1 ;;
     *) SETUP_EXE="$1" ;;
   esac
@@ -56,7 +58,12 @@ case "$(basename "$SETUP_EXE")" in *"CODESYS 64"*) ;; *) die "use the 64-bit ins
 for c in wine wineserver winetricks python3; do command -v "$c" >/dev/null || die "missing: $c"; done
 [ "$WITH_PACKAGES" = 0 ] || command -v 7z >/dev/null || die "missing: 7z (Debian/Ubuntu package 7zip) for --packages"
 WINE_MAJOR="$(wine --version | sed -E 's/^wine-([0-9]+).*/\1/')"
-[ "$WINE_MAJOR" -ge 11 ] 2>/dev/null || echo "warning: tested with WINE 11.x, found $(wine --version)"
+if ! [ "$WINE_MAJOR" -ge 11 ] 2>/dev/null; then
+  [ "$UNSUPPORTED_WINE" = 1 ] || die "$(wine --version) is not supported. Install WineHQ WINE 11 (winehq-stable):
+       https://gitlab.winehq.org/wine/wine/-/wikis/Download
+       (--unsupported-wine tries anyway)"
+  echo "warning: $(wine --version) is not supported, continuing because of --unsupported-wine"
+fi
 locale -a | grep -qi '^en_US\.utf-\?8$' || die "locale en_US.UTF-8 missing (CODESYS tools fail with other cultures)"
 INSTALLDIR="C:\\CODESYS-$VER"
 INSTALLDIR_UNIX="$WINEPREFIX/drive_c/CODESYS-$VER"

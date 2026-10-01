@@ -75,10 +75,23 @@ Details and fixes: [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ### Requirements
 
-- x86-64 Linux with WINE **11.0 or newer**, 64-bit and 32-bit (WineHQ packages: `winehq-stable`), plus `winetricks` and `python3`. `--packages` also needs `7z` (Debian/Ubuntu package `7zip`).
+- x86-64 Linux with **WineHQ WINE 11** (64-bit and 32-bit), plus `winetricks` and `python3`. `--packages` also needs `7z` (Debian/Ubuntu package `7zip`).
 - Locale `en_US.UTF-8` generated (`locale -a`).
 - About 6 GB of free disk space for the core install, and about 9 GB with `--full`. You also need internet access for winetricks.
 - The official `CODESYS 64 3.5.x.y.exe` installer.
+
+#### Which WINE
+
+| WINE | Support |
+|---|---|
+| **WineHQ `winehq-stable` 11.x** (tested: 11.0) | **Supported.** Online login works with the default crypto fix (drop-in DLLs). |
+| WineHQ `winehq-devel` 11.5+ with the [patches](wine-patches/) built in | Works, best effort. |
+| Rolling distributions already on WINE 11 (Arch, openSUSE Tumbleweed) | Should work, untested. |
+| Distribution packages `wine` 10.x (Debian 13, Ubuntu 25.10 / 26.04) and 9.x (Ubuntu 24.04) | **Not supported.** They have the same login and package-link gaps, and the drop-in DLLs are untested there. |
+
+Distribution WINE packages stay on old versions for years. WineHQ's own packages take two commands to add. Everything here (IDE, the 43 bundled packages, the crypto fix and the patches) was tested on WINE 11, and the drop-in DLLs depend on the WINE version. If your distribution ships WINE 10 or older, add the WineHQ repository instead; see [WineHQ: Download](https://gitlab.winehq.org/wine/wine/-/wikis/Download). `install.sh` stops on WINE older than 11.
+
+Plan: when WINE 12.0 is released (expected January 2027), ideally with the ncrypt and shell32 fixes merged, the baseline moves to WINE 12 and the crypto fix is removed.
 
 ### What install.sh does
 
@@ -148,6 +161,8 @@ We don't modify any WINE files. There are two separate things:
 No. CODESYS GmbH supports Windows only, and the WINE patches aren't upstream yet. Treat this as a way to edit and build projects on Linux. For commissioning and production work on real machines, use a supported Windows setup until online behaviour is well tested.
 
 #### Which WINE version do I need?
+
+WineHQ WINE 11, see [Which WINE](#which-wine).
 
 - **WINE 11.0** (stable) for the IDE, building and packages.
 - For online login, either **WINE 11.0 plus the drop-in `ncrypt.dll` and `bcrypt.dll`** (both built from WINE master with the patches; the bcrypt one brings a fix that 11.0 lacks), or **a WINE 11.5 or newer build with the patches**.
