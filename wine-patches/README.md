@@ -15,6 +15,14 @@ The RSA-OAEP fix also depends on bcrypt fixes that first shipped in WINE 11.5 ([
 
 This needs no WINE rebuild on the target machine. Only CODESYS uses the patched DLLs; every other program in the prefix keeps WINE's own DLLs.
 
+**Use [install/crypto-fix.sh](../install/crypto-fix.sh)** (`apply`, `remove`, `status`). `install.sh` runs it by default when patched DLLs are available. It does the steps below, with these extras:
+- backups of WINE's DLLs
+- a check that no WINE programs are running
+- a gate on tested WINE versions
+- checksum verification for release folders
+
+What it does, if you want to do it by hand:
+
 1. Take `ncrypt.dll` and `bcrypt.dll` from a build (Route B), or from a release of this repository once one is published.
 2. Copy the `x86_64-windows` versions to `$WINEPREFIX/drive_c/windows/system32/` and the `i386-windows` versions to `.../syswow64/`.
 3. In those copies, overwrite the 16-byte marker `Wine builtin DLL` at file offset `0x40` with any other text. Otherwise WINE recognizes the files as its own builtins and loads its unpatched copy instead (`WINEDLLPATH` doesn't help either).
