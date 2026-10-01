@@ -68,7 +68,7 @@ The first start updates the prefix to the newer WINE version, and stable WINE ca
 | V3.5 SP22 Patch 4 | 11.0 (stable) | fails, `0x80090029` | aborts at the Link step |
 | V3.5 SP22 Patch 4 | master `6d1b094` + patches (11.18) | **OK** | **OK**, links created |
 | V3.5 SP22 Patch 4 | 11.0 (stable) + drop-in ncrypt/bcrypt (Route A) | **OK** | not tested (no shell32 drop-in) |
-| V3.5 SP22 Patch 4 | 11.0 (stable) + drop-in via `install.sh` | **Login to a real runtime OK**: CODESYS Control for Linux SL 4.22 (native .deb, systemd) through Edge Gateway for Linux 4.22 on `localhost:1217`. Download and run work. GUI, manual test. | – |
+| V3.5 SP22 Patch 4 | 11.0 (stable) + drop-in via `install.sh` | **Login to a real runtime OK** (encrypted and authenticated): CODESYS Control for Linux SL 4.22 (native .deb, systemd) through Edge Gateway for Linux 4.22 on `localhost:1217`. Download and run work. GUI, manual test. | – |
 
 The simulation rows were tested with the headless login test in [tests/](../tests/). The Control for Linux row is a manual GUI test on the same host. Remote hardware PLCs haven't been tested yet.
 
