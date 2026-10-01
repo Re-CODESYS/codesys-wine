@@ -56,7 +56,7 @@ The test machine is an Intel i7-7500U laptop with Intel HD 620 graphics, running
 - All add-on packages bundled with the setup (`--packages`), including Scripting, Visualization and its **Visual Style Editor** and **HTML5 Control Editor**.
 - **CODESYS Installer 2.6.1** (`--installer`), for listing installations and installing add-ons.
 - Several CODESYS versions side by side in one prefix.
-- **CodeMeter licenses and USB dongles** through CodeMeter for Linux, including licensed add-ons such as Git and Profiler.
+- **CodeMeter licenses and USB dongles** through CodeMeter for Linux, including licensed add-ons: Git and Profiler install, and Git finds its license. Git operations themselves (commit, push) are not tested yet.
 - With patched WINE, or two patched DLLs dropped into the prefix (done by default): **online login** to the simulation and to **CODESYS Control for Linux SL**.
 
 Planned: **agentic help for installation and management**, as an agent skill plus tools, so an AI assistant like Claude can install, update, diagnose and maintain CODESYS-on-WINE setups for you.
@@ -64,7 +64,7 @@ Planned: **agentic help for installation and management**, as an agent skill plu
 ### Known limitations
 
 - **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs two patched DLLs in the prefix, or a [patched WINE](wine-patches/), until WINE itself fixes these gaps. `install.sh` adds them by default. Tested with the simulation and a local Control for Linux SL. Hardware PLCs are not tested yet.
-- **CodeMeter only through a native Linux CodeMeter.** `install.sh` adds WIBU's client DLLs, but not the Windows CodeMeter service. Licenses and dongles come from a CodeMeter runtime on Linux. This was tested with USB dongles and licensed add-ons (Git, Profiler). **Application Composer** uses a different licensing model and is still skipped by `--packages`.
+- **CodeMeter only through a native Linux CodeMeter.** `install.sh` adds WIBU's client DLLs, but not the Windows CodeMeter service. Licenses and dongles come from a CodeMeter runtime on Linux. This was tested with USB dongles: the licensed Git add-on finds its license. Using Git or Profiler is not tested yet. **Application Composer** uses a different licensing model and is still skipped by `--packages`.
 - **No Windows Gateway or Control Win.** Use a natively running CODESYS Edge Gateway for Linux (tested, installed with Control for Linux SL) instead; see [PLC communication](#plc-communication-control-for-linux-sl).
 - **On stock WINE, packages can't create Start-menu links.** Installing still works if `--cancelOnException` is left off, which `install.sh` does.
 - **Installing add-ons in the CODESYS Installer needs admin rights.** See [the FAQ](#faq).
