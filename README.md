@@ -158,7 +158,7 @@ We don't modify any WINE files. There are two separate things:
 
 #### Is it supported?
 
-No. CODESYS GmbH supports Windows only, and the WINE patches aren't upstream yet. Treat this as a way to edit and build projects on Linux. For commissioning and production work on real machines, use a supported Windows setup until online behaviour is well tested.
+No. CODESYS GmbH supports Windows only, and the WINE fixes aren't in a WINE release yet (the patches here are AI-written and therefore not submitted upstream; see [wine-patches/](wine-patches/)). Treat this as a way to edit and build projects on Linux. For commissioning and production work on real machines, use a supported Windows setup until online behaviour is well tested.
 
 #### Which WINE version do I need?
 

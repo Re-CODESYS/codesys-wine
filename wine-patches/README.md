@@ -1,11 +1,13 @@
 # WINE patches for CODESYS
 
-These patches fix WINE gaps that break CODESYS V3.5. They are written against WINE master and are meant to go upstream (not submitted yet). Once WINE ships them, this directory only needs to say which WINE version to use.
+These patches fix WINE gaps that break CODESYS V3.5. They are written against WINE master.
 
-| Patches | Fixes | Upstream |
+> **Origin and upstream status.** The patches were written with an AI assistant (Claude). WineHQ doesn't accept LLM-generated contributions ([policy](https://gitlab.winehq.org/winehq/winehq/-/wikis/home), "No LLM-generated code"), so they are **not submitted to WINE** and must not be. Upstream, the two problems are reported as WINE bugs instead, written by a human, with traces and the code locations, so WINE developers can fix them. Once a WINE release fixes them, this directory only needs to say which WINE version to use. The copyright status of AI-generated code is unclear, and that also applies to these patches and to the DLLs built from them. They are offered under WINE's license, LGPL-2.1-or-later, with that caveat.
+
+| Patches | Fixes | Upstream WINE bug |
 |---|---|---|
-| `0001`–`0003` ncrypt | **Online login** (Simulation, very likely real PLCs too): `Unknown error "-2146893783"` (`0x80090029 NTE_NOT_SUPPORTED`). `NCryptEncrypt` refused RSA OAEP padding, and `NCryptDecrypt` was a stub. | not yet submitted |
-| `0004`–`0005` shell32 | **Package install** aborting at `Link: ….exe` with "The method or operation is not implemented" (for example Visualization 4.10). `IShellLinkDataList::RemoveDataBlock` was a stub; CODESYS removes the `EXP_SZ_ICON_SIG` block. | not yet submitted |
+| `0001`–`0003` ncrypt | **Online login** (Simulation, very likely real PLCs too): `Unknown error "-2146893783"` (`0x80090029 NTE_NOT_SUPPORTED`). `NCryptEncrypt` refused RSA OAEP padding, and `NCryptDecrypt` was a stub. | to be filed |
+| `0004`–`0005` shell32 | **Package install** aborting at `Link: ….exe` with "The method or operation is not implemented" (for example Visualization 4.10). `IShellLinkDataList::RemoveDataBlock` was a stub; CODESYS removes the `EXP_SZ_ICON_SIG` block. | to be filed |
 
 The patches follow WINE's submission conventions: conformance tests go in their own commit with `todo_wine` markers, and the fix commit removes those markers. The tests in `dlls/ncrypt/tests` and `dlls/shell32/tests` pass on WINE in 32-bit and 64-bit at every commit.
 
