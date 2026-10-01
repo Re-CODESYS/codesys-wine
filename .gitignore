@@ -1,0 +1,4 @@
+*.exe
+*.msi
+*.log
+__pycache__/
