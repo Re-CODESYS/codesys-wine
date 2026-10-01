@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 # Install the CODESYS V3.5 Development System (64-bit) into its own WINE prefix.
 #
-# Usage: ./install.sh "/path/to/CODESYS 64 3.5.22.40.exe"
+# Usage: install/install.sh [options] "/path/to/CODESYS 64 3.5.22.40.exe"
+#
+# Options:
+#   --installer        also install the CODESYS Installer (APInstaller) and the
+#                      .NET 8 Desktop Runtime it needs
+#   --packages         also install the add-on packages bundled with the setup,
+#                      as the Windows setup does (slow: about an hour)
+#   --full             both of the above
 #
 # Environment overrides:
 #   WINEPREFIX   prefix to create/use   (default ~/.local/share/wineprefixes/codesys)
@@ -12,7 +19,17 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-SETUP_EXE="${1:?usage: $0 <CODESYS 64 3.5.x.y.exe>}"
+WITH_INSTALLER=0 WITH_PACKAGES=0 SETUP_EXE=""
+for a in "$@"; do
+  case "$a" in
+    --installer) WITH_INSTALLER=1 ;;
+    --packages) WITH_PACKAGES=1 ;;
+    --full) WITH_INSTALLER=1 WITH_PACKAGES=1 ;;
+    -*) echo "unknown option: $a" >&2; exit 1 ;;
+    *) SETUP_EXE="$a" ;;
+  esac
+done
+[ -n "$SETUP_EXE" ] || { echo "usage: $0 [--installer] [--packages] [--full] <CODESYS 64 3.5.x.y.exe>" >&2; exit 1; }
 export WINEPREFIX="${WINEPREFIX:-$HOME/.local/share/wineprefixes/codesys}"
 export WINEARCH=win64
 export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
@@ -29,6 +46,7 @@ VER="$(basename "$SETUP_EXE" | grep -oE '3\.5\.[0-9]+\.[0-9]+' || true)"
 [ -n "$VER" ] || die "cannot read a 3.5.x.y version from the installer file name"
 case "$(basename "$SETUP_EXE")" in *"CODESYS 64"*) ;; *) die "use the 64-bit installer (CODESYS 64 $VER.exe)";; esac
 for c in wine wineserver winetricks python3; do command -v "$c" >/dev/null || die "missing: $c"; done
+[ "$WITH_PACKAGES" = 0 ] || command -v 7z >/dev/null || die "missing: 7z (Debian/Ubuntu package 7zip) for --packages"
 WINE_MAJOR="$(wine --version | sed -E 's/^wine-([0-9]+).*/\1/')"
 [ "$WINE_MAJOR" -ge 11 ] 2>/dev/null || echo "warning: tested with WINE 11.x, found $(wine --version)"
 locale -a | grep -qi '^en_US\.utf-\?8$' || die "locale en_US.UTF-8 missing (CODESYS tools fail with other cultures)"
@@ -76,8 +94,8 @@ fi
 [ -f "$MSI" ] || die "MSI not found after extraction: $MSI"
 
 # --- 4. Install the development system --------------------------------------
-# Skips CodeMeter, the Gateway/Control Win services and the separate
-# CODESYS Installer (APInstaller), which hangs under WINE.
+# Skips CodeMeter, the Gateway/Control Win services and the bundled add-on
+# packages (see --packages); the CODESYS Installer is step 5 (--installer).
 if [ ! -f "$INSTALLDIR_UNIX/CODESYS/Common/CODESYS.exe" ]; then
   log "Installing CODESYS $VER (silent MSI, by running it you accept the CODESYS license)"
   wine msiexec /i "$MSI" /qn /norestart \
@@ -89,15 +107,74 @@ if [ ! -f "$INSTALLDIR_UNIX/CODESYS/Common/CODESYS.exe" ]; then
 fi
 [ -f "$INSTALLDIR_UNIX/CODESYS/Common/CODESYS.exe" ] \
   || die "install failed, see $WINEPREFIX/drive_c/codesys-$VER-install.log"
-
-# --- 5. Launcher and menu entry ---------------------------------------------
 PROFILE_XML="$(ls "$INSTALLDIR_UNIX/CODESYS/Profiles/"*.profile.xml | head -n1)"
 PROFILE="$(basename "$PROFILE_XML" .profile.xml)"
+
+# --- 5. CODESYS Installer (optional) ----------------------------------------
+# APInstaller 2.6.x is a .NET 8 app; with the Desktop Runtime from its own
+# setup it runs. Installing add-ons with it needs admin rights: use the
+# "Restart as Administrator" button, or tools/runas.vbs for APInstaller.CLI.
+APINST="$WINEPREFIX/drive_c/Program Files (x86)/CODESYS/APInstaller/APInstaller.CLI.exe"
+if [ "$WITH_INSTALLER" = 1 ] && [ ! -f "$APINST" ]; then
+  log "Installing the CODESYS Installer and .NET 8 Desktop Runtime"
+  AP_EXE="$(ls "$CDS_WORK/$VER/"*".CODESYS Installer.exe" | head -n1)"
+  [ -f "$AP_EXE" ] || die "CODESYS Installer not found in the setup"
+  python3 "$HERE/tools/is_extract.py" "$AP_EXE" "$CDS_WORK/$VER/apinstaller" >/dev/null
+  for rt in "$CDS_WORK/$VER/apinstaller/"*windowsdesktop-runtime-*-win-x64.exe \
+            "$CDS_WORK/$VER/apinstaller/"*windowsdesktop-runtime-*-win-x86.exe; do
+    wine "$rt" /install /quiet /norestart
+  done
+  wine msiexec /i "$CDS_WORK/$VER/apinstaller/CODESYS Installer.msi" /qn /norestart \
+    '/L*v' 'C:\codesys-installer-install.log'
+  wineserver -w
+  [ -f "$APINST" ] || die "CODESYS Installer install failed, see $WINEPREFIX/drive_c/codesys-installer-install.log"
+fi
+
+# --- 6. Bundled add-on packages (optional) ----------------------------------
+# Installed one at a time with PackageManagerCLI (no admin rights needed),
+# with all packages beside each other so dependencies resolve. Do not pass
+# --cancelOnException: creating Start-menu links fails under WINE
+# (IShellLinkDataList::RemoveDataBlock), and cancelling there leaves a package
+# half installed. Without it only the links are skipped.
+if [ "$WITH_PACKAGES" = 1 ]; then
+  PKGDIR="$WINEPREFIX/drive_c/codesys-packages/$VER"
+  DONE="$WINEPREFIX/codesys-wine-packages-$VER.done"
+  if [ -z "$(ls "$PKGDIR"/*.package 2>/dev/null)" ]; then
+    log "Extracting bundled packages"
+    python3 "$HERE/tools/extract_packages.py" "$MSI" "$PKGDIR" >/dev/null
+  fi
+  printf '@echo off\r\ncd /d %s\\CODESYS\\Common\r\nPackageManagerCLI.exe --profile="%s" --install="C:\\codesys-packages\\%s\\%%~1" --verbose\r\n' \
+    "$INSTALLDIR" "$PROFILE" "$VER" > "$WINEPREFIX/drive_c/install-package-$VER.cmd"
+  touch "$DONE"; failed=()
+  for p in "$PKGDIR"/*.package; do
+    n="$(basename "$p")"
+    case "$n" in
+      "CODESYS Compatibility Package "*) continue ;;  # part of the MSI install
+      # AxProtector-protected plug-in: without the CodeMeter runtime it pops up
+      # a modal "cpsrt library not found" dialog and fails. Licensed add-on.
+      "CODESYS Application Composer "*) echo "   skipping $n (needs CodeMeter)"; continue ;;
+    esac
+    grep -qxF "$n" "$DONE" && continue
+    log "Package: $n"
+    if wine cmd /c "C:\\install-package-$VER.cmd" "$n" > "$PKGDIR/${n%.package}.log" 2>&1; then
+      echo "$n" >> "$DONE"
+    else
+      failed+=("$n"); echo "   failed, see $PKGDIR/${n%.package}.log"
+    fi
+    wineserver -w
+  done
+  [ "${#failed[@]}" = 0 ] || echo "warning: ${#failed[@]} package(s) failed: ${failed[*]}"
+fi
+
+# --- 7. Launcher and menu entry ---------------------------------------------
 BIN="$HOME/.local/bin"; APPS="$HOME/.local/share/applications"
 mkdir -p "$BIN" "$APPS"
 printf '@echo off\r\ncd /d %s\\CODESYS\\Common\r\nCODESYS.exe --profile="%s" %%*\r\n' \
   "$INSTALLDIR" "$PROFILE" > "$WINEPREFIX/drive_c/launch-codesys-$VER.cmd"
-LAUNCHER="$BIN/codesys-$VER"
+# Name launchers after the prefix unless it is the default one, so test
+# prefixes don't replace the launcher of the main installation.
+SUFFIX=""; [ "$WINEPREFIX" = "$HOME/.local/share/wineprefixes/codesys" ] || SUFFIX="-$(basename "$WINEPREFIX")"
+LAUNCHER="$BIN/codesys-$VER$SUFFIX"
 cat > "$LAUNCHER" <<EOF
 #!/bin/sh
 # $PROFILE under WINE (generated by codesys-wine/install.sh)
@@ -108,10 +185,10 @@ export WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--disable-gpu
 exec wine cmd /c 'C:\\launch-codesys-$VER.cmd' "\$@" >> "\$WINEPREFIX/codesys-launch.log" 2>&1
 EOF
 chmod +x "$LAUNCHER"
-cat > "$APPS/codesys-$VER.desktop" <<EOF
+cat > "$APPS/codesys-$VER$SUFFIX.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=$PROFILE (WINE)
+Name=$PROFILE (WINE${SUFFIX:+, ${SUFFIX#-}})
 Exec=$LAUNCHER
 Icon=$INSTALLDIR_UNIX/CODESYS/Common/CoDeSys.ico
 Categories=Development;

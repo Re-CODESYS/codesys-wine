@@ -16,7 +16,7 @@ Run the **CODESYS V3.5 Development System** (64-bit IDE) on Linux with WINE.
 | Editors, project handling, compile | Works |
 | Online login (simulation, and very likely real PLCs) | **Fails** with `Unknown error "-2146893783"` (0x80090029), caused by a WINE ncrypt gap. See [docs/known-issues.md](docs/known-issues.md) |
 | CodeMeter licensing, USB dongles | Not installed |
-| CODESYS Installer (APInstaller), Visualization 4.10 package | Not working under WINE |
+| CODESYS Installer 2.6.1, add-on packages incl. Visualization 4.10 and its editors | Works (`--installer`, `--packages`). Start-menu links for the editors aren't created. |
 
 ## Requirements
 
@@ -29,7 +29,7 @@ Run the **CODESYS V3.5 Development System** (64-bit IDE) on Linux with WINE.
 
 ```sh
 git clone <this repo> && cd codesys-wine
-./install.sh ~/Downloads/"CODESYS 64 3.5.22.40.exe"
+install/install.sh ~/Downloads/"CODESYS 64 3.5.22.40.exe"
 ```
 
 The script:
@@ -37,8 +37,25 @@ The script:
 2. Installs `dotnet48 vcrun2022 msxml6 win10 webview2` with winetricks.
 3. Sets a per-application `*security=native` DLL override for the CODESYS tools. Without it, WINE's own `security.dll` shadows the managed `Security.dll` that CODESYS ships, causing a `BadImageFormatException`.
 4. Re-registers `oleaut32` and turns off WPF hardware acceleration.
-5. Unpacks the InstallShield EXE with `tools/is_extract.py`, then runs the CODESYS MSI silently. It skips CodeMeter, the Windows services and the CODESYS Installer.
-6. Creates the launcher `~/.local/bin/codesys-<version>` and a desktop menu entry.
+5. Unpacks the InstallShield EXE with `install/tools/is_extract.py`, then runs the CODESYS MSI silently. It skips CodeMeter, the Windows services and the CODESYS Installer.
+6. Creates the launcher `~/.local/bin/codesys-<version>` and a desktop menu entry. With a non-default `WINEPREFIX`, the prefix name is appended, for example `codesys-3.5.22.40-test`.
+
+Optional extras:
+
+| Option | What it adds |
+|---|---|
+| `--installer` | **CODESYS Installer 2.6.1** (APInstaller) and the .NET 8 Desktop Runtime it needs. It lists installations and installs add-ons. Installing add-ons needs admin rights: use its **Restart as Administrator** button, or `install/tools/runas.vbs` for `APInstaller.CLI.exe`. |
+| `--packages` | The **add-on packages bundled with the setup**, as a Windows install would include: Scripting, Visualization, the Visual Style and HTML5 control editors, fieldbuses, SoftMotion and so on. They are installed with `PackageManagerCLI`. It's slow, about an hour. Needs `7z`. |
+| `--full` | Both. |
+
+`--packages` skips **Application Composer**. It is a licensed add-on, and its plug-in is protected with CodeMeter (AxProtector). Without the CodeMeter runtime it shows a modal "cpsrt library not found" dialog and fails.
+
+Installers this was tested with (SHA256):
+
+```
+4dae598fc3d2143b8ebdddceba34ac2a73009b1eb001d8d553085a8fb0478ad7  CODESYS 64 3.5.22.40.exe
+c3d493c2d1df71a539fdb34a31dbaec4e53610ec6a2b817b388b4e1e2a4ba1a9  CODESYS 64 3.5.22.10.exe
+```
 
 The script can be re-run safely. Running it with another installer version adds that version side by side in the same prefix.
 
@@ -47,5 +64,5 @@ The silent install passes `AgreeToLicense=Yes`. Read the CODESYS license before 
 ## Credits
 
 - The recipe follows the macOS guide in [livingforjesus/codesys-macos-install-guide](https://github.com/livingforjesus/codesys-macos-install-guide), adapted to Linux and tested there.
-- The InstallShield stream format is documented by [ISx](https://github.com/lifenjoiner/ISx). `tools/is_extract.py` is an independent pure-Python implementation.
+- The InstallShield stream format is documented by [ISx](https://github.com/lifenjoiner/ISx). `install/tools/is_extract.py` is an independent pure-Python implementation.
 - Older work: [CODESYS Forge: codesys-4-linux](https://forge.codesys.com/tol/codesys-4-linux/home/Manual%20Installation/).
