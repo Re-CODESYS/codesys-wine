@@ -45,7 +45,7 @@ More screenshots are welcome (build output, Visualization editor, online login).
 | V3.5 SP22 Patch 4 (3.5.22.40) | winehq-stable 11.0 | Debian 13 (trixie), x86-64 | IDE, build, 43 bundled packages, CODESYS Installer |
 | V3.5 SP22 Patch 1 (3.5.22.10) | winehq-stable 11.0 | Debian 13 (trixie), x86-64 | IDE, build |
 | V3.5 SP22 Patch 4 (3.5.22.40) | WINE master 11.18 + [wine-patches](wine-patches/) | Debian 13 (trixie), x86-64 | Also **simulation login**, and package installs including Start-menu links |
-| V3.5 SP22 Patch 4 (3.5.22.40) | winehq-stable 11.0 + patched `ncrypt.dll`/`bcrypt.dll` ([drop-in](wine-patches/#route-a-drop-in-dlls-for-stock-winehq-stable-110)) | Debian 13 (trixie), x86-64 | Also **simulation login** (in the GUI), and **login to CODESYS Control for Linux SL 4.22** running natively on the same machine |
+| V3.5 SP22 Patch 4 (3.5.22.40) | winehq-stable 11.0 + patched `ncrypt.dll`/`bcrypt.dll` ([drop-in](wine-patches/#route-a-drop-in-dlls-for-stock-winehq-stable-110)) | Debian 13 (trixie), x86-64 | Also **simulation login** (in the GUI), and **encrypted, authenticated login to CODESYS Control for Linux SL 4.22** running natively on the same machine (Edge Gateway for Linux 4.22) |
 
 The test machine is an Intel i7-7500U laptop with Intel HD 620 graphics, running KDE Plasma on Wayland. Ubuntu and older WINE versions are not tested yet; reports are welcome.
 
@@ -64,7 +64,7 @@ Planned: **agentic help for installation and management**, as an agent skill plu
 
 - **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs two patched DLLs in the prefix, or a [patched WINE](wine-patches/), until WINE itself fixes these gaps. `install.sh` adds them by default. Tested with the simulation and a local Control for Linux SL. Hardware PLCs are not tested yet.
 - **No CodeMeter:** licensed add-ons and USB dongles don't work, and **Application Composer** is skipped because its plug-in is CodeMeter-protected.
-- **No Windows Gateway or Control Win.** Use the gateway of a natively running CODESYS Control for Linux SL or Edge Gateway for Linux instead; see [PLC communication](#plc-communication-control-for-linux-sl).
+- **No Windows Gateway or Control Win.** Use a natively running CODESYS Edge Gateway for Linux (tested, installed with Control for Linux SL) instead; see [PLC communication](#plc-communication-control-for-linux-sl).
 - **On stock WINE, packages can't create Start-menu links.** Installing still works if `--cancelOnException` is left off, which `install.sh` does.
 - **Installing add-ons in the CODESYS Installer needs admin rights.** See [the FAQ](#faq).
 - **First start takes several minutes.** The start page's "Latest news" stays empty.
@@ -145,10 +145,10 @@ Online login needs a fix that stock WINE doesn't have yet. [wine-patches/](wine-
 The Windows Gateway and Control Win services are not installed. Run the Linux runtime and its gateway natively instead. This was tested with CODESYS Control for Linux SL 4.22 on the same machine:
 
 1. In the **CODESYS Installer** (`--installer`), restart as administrator and add the **CODESYS Control for Linux SL** packages.
-2. In CODESYS, use **Tools > Deploy Control SL** to install the runtime and gateway on the Linux host over SSH. This needs `sudo` on the target.
+2. In CODESYS, use the **Deploy Control SL** tool to install the runtime and the Edge Gateway on the Linux host over SSH. This needs `sudo` on the target. Choose the native installation, not the container.
 3. Add the device. **CODESYS Control for Linux SL** is listed under **SoftMotion PLCs**, not SoftPLC.
 4. In the device's **Communication Settings**, **Add Gateway** with IP `127.0.0.1` (or the host's IP) and port `1217`, then **Scan Network** and select the device.
-5. **Login.** This needs the crypto fix (on by default).
+5. **Login.** The login is encrypted and authenticated, which needs the crypto fix (on by default).
 
 ### FAQ
 
@@ -180,6 +180,10 @@ WineHQ WINE 11, see [Which WINE](#which-wine).
 #### Why does the CODESYS Installer say "Read-Only Mode"?
 
 WINE starts programs as a limited administrator. Click **Restart as Administrator** in the Installer. From the command line, start `APInstaller.CLI.exe` through `install/tools/runas.vbs`, which uses Windows' "run as administrator". A cleaner Linux-side approach is still open.
+
+#### The CODESYS window is tiny on a HiDPI screen
+
+WINE draws at 96 dpi unless told otherwise, for example under KDE on Wayland with 150 % scaling, when Xwayland is set to let applications scale themselves. Set WINE's DPI in the CODESYS prefix: `winecfg` > **Graphics** > **Screen resolution**, 120 for 125 % or 144 for 150 %. Then restart CODESYS.
 
 #### Can I use my CODESYS license or dongle?
 
