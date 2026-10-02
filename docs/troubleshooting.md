@@ -59,6 +59,6 @@ To check whether a fix already exists upstream, look at `dlls/<name>/` in [WINE 
 
 - **CodeMeter** isn't installed, so licensed add-ons, protected plug-ins and dongles are unavailable.
 - **CODESYS Installer** needs the .NET 8 Desktop Runtime and admin rights for add-on installs; see the README.
-- **Start page "Latest news"** stays empty because WebView2 runs with the GPU turned off.
+- **Start page "Latest news"** may stay empty on some setups; WebView2 runs with the GPU turned off. In a fresh install on WINE 11.0 (2026-10-02) it renders fine.
 - **Gateway / PLC scan:** the Windows Gateway service isn't installed. Use a gateway running natively on Linux, such as CODESYS Control for Linux SL or Edge Gateway for Linux, and add it by IP (port 1217). Not yet tested together with the ncrypt patch.
 - **First start** takes a few minutes. A large part of that is certificate-store enumeration in `crypt32`: about 340,000 enumeration steps at startup.
