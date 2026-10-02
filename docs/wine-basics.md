@@ -56,6 +56,7 @@ WINE scales all windows and fonts by its **DPI setting**. The default is 96 dpi 
 - On **KDE Plasma (Wayland)**, *System Settings → Display → Legacy applications (X11)*:
   - "Apply scaling themselves" (sharp) needs the WINE DPI above.
   - "Scaled by the system" scales WINE windows per monitor, but blurry.
+- Fonts, menus and dialogs scale; **toolbar icons stay small**, because they're fixed-size bitmaps. That's expected.
 - Only the code editor font: CODESYS *Tools → Options → Text Editor → Font*.
 
 ## Files and paths
