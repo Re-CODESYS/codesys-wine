@@ -219,6 +219,19 @@ if [ "$WITH_PACKAGES" = 1 ]; then
 fi
 [ "${#failed[@]}" = 0 ] || echo "warning: ${#failed[@]} package(s) failed: ${failed[*]}"
 
+# Visualization's post-install step CreateVisuRepositoryInfo.bat should create
+# "Visual Elements\formatinfo", but WINE's cmd drops the quotes of a redirection
+# inside a pipe and writes "C:\ProgramData\CODESYS\Visual" instead. Without the
+# file CODESYS finds no visualization profile and the Visualization Toolbox is
+# empty (docs/troubleshooting.md). Also repairs prefixes installed earlier.
+REPO="$WINEPREFIX/drive_c/ProgramData/CODESYS"
+for d in "Visual Elements" "Visualization Styles"; do
+  if [ -d "$REPO/$d" ] && [ ! -f "$REPO/$d/formatinfo" ]; then
+    printf '1.0' > "$REPO/$d/formatinfo"; echo "   created $d\\formatinfo (WINE cmd workaround)"
+  fi
+done
+if [ -f "$REPO/Visual" ] && [ "$(cat "$REPO/Visual")" = "1.0" ]; then rm -f "$REPO/Visual"; fi
+
 # --- 7. Online-login crypto fix (default on) -------------------------------
 # Temporary until the ncrypt/bcrypt patches are in a WINE release; it skips
 # itself on untested WINE versions or when the patched DLLs aren't available.

@@ -67,6 +67,7 @@ Planned: **agentic help for installation and management**, as an agent skill plu
 - **CodeMeter only through a native Linux CodeMeter.** `install.sh` adds WIBU's client DLLs, but not the Windows CodeMeter service. Licenses and dongles come from a CodeMeter runtime on Linux. This was tested with USB dongles: the licensed Git add-on finds its license. Using Git or Profiler is not tested yet. **Application Composer** uses a different licensing model and is skipped.
 - **No Windows Gateway or Control Win.** Use a natively running CODESYS Edge Gateway for Linux (tested, installed with Control for Linux SL) instead; see [PLC communication](#plc-communication-control-for-linux-sl).
 - **On stock WINE, packages can't create Start-menu links.** Installing still works if `--cancelOnException` is left off, which `install.sh` does.
+- **On stock WINE, the Visualization package's post-install step fails** (a WINE `cmd` bug), which would leave the Visualization Toolbox empty. `install.sh` creates the missing file afterwards; for older installs see [troubleshooting](docs/troubleshooting.md#visualization-toolbox-is-empty).
 - **Installing add-ons in the CODESYS Installer needs admin rights.** See [the FAQ](#faq).
 - **First start takes several minutes.** The start page's "Latest news" stays empty.
 
