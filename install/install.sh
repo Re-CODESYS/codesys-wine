@@ -4,16 +4,20 @@
 # Usage: install/install.sh [options] "/path/to/CODESYS 64 3.5.22.40.exe"
 #
 # Options:
-#   --installer        also install the CODESYS Installer (APInstaller) and the
-#                      .NET 8 Desktop Runtime it needs
-#   --packages         also install the add-on packages bundled with the setup,
-#                      as the Windows setup does (slow: about an hour)
-#   --full             both of the above
+#   --no-installer     skip the CODESYS Installer (APInstaller) and the .NET 8
+#                      Desktop Runtime it needs (installed by default)
+#   --no-packages      install only Visualization and Visualization Support of
+#                      the bundled add-on packages. By default all bundled
+#                      packages are installed in this run, as the Windows
+#                      setup does (slow: about an hour).
+#   --full             accepted for compatibility (everything is on by default)
 #   --no-crypto-fix    don't add the patched WINE crypto DLLs for online login
 #                      (see install/crypto-fix.sh; on by default)
 #   --no-codemeter     don't add the CodeMeter client DLLs (see
 #                      install/codemeter-client.sh; on by default)
 #   --crypto-fix-dlls DIR  where the patched DLLs are (default: see crypto-fix.sh)
+#   --dpi N            set WINE's DPI in the prefix, e.g. 120 (125 %) or 144
+#                      (150 %) for HiDPI screens (default: leave as is, 96)
 #   --yes              don't ask questions
 #   --unsupported-wine try on WINE older than 11 (not supported)
 #
@@ -26,28 +30,35 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-WITH_INSTALLER=0 WITH_PACKAGES=0 CRYPTO_FIX=1 CODEMETER=1 UNSUPPORTED_WINE=0 SETUP_EXE="" FIX_ARGS=()
+WITH_INSTALLER=1 WITH_PACKAGES=1 CRYPTO_FIX=1 CODEMETER=1 UNSUPPORTED_WINE=0 DPI="" SETUP_EXE="" FIX_ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --installer) WITH_INSTALLER=1 ;;
-    --packages) WITH_PACKAGES=1 ;;
+    --installer) WITH_INSTALLER=1 ;;  # default; kept for compatibility
+    --no-installer) WITH_INSTALLER=0 ;;
+    --packages) WITH_PACKAGES=1 ;;  # default; kept for compatibility
+    --no-packages) WITH_PACKAGES=0 ;;
     --full) WITH_INSTALLER=1 WITH_PACKAGES=1 ;;
     --no-crypto-fix) CRYPTO_FIX=0 ;;
     --no-codemeter) CODEMETER=0 ;;
     --crypto-fix-dlls) FIX_ARGS+=(--dlls "$2"); shift ;;
     --yes) FIX_ARGS+=(--yes) ;;
+    --dpi) DPI="$2"; shift ;;
     --unsupported-wine) UNSUPPORTED_WINE=1 ;;
     -*) echo "unknown option: $1" >&2; exit 1 ;;
     *) SETUP_EXE="$1" ;;
   esac
   shift
 done
-[ -n "$SETUP_EXE" ] || { echo "usage: $0 [--installer] [--packages] [--full] [--no-crypto-fix] <CODESYS 64 3.5.x.y.exe>" >&2; exit 1; }
+[ -n "$SETUP_EXE" ] || { echo "usage: $0 [--no-installer] [--no-packages] [--no-codemeter] [--no-crypto-fix] [--dpi N] [--yes] <CODESYS 64 3.5.x.y.exe>" >&2; exit 1; }
+case "$DPI" in "") ;; *[!0-9]*) echo "--dpi needs a number, e.g. 144" >&2; exit 1 ;; esac
 export WINEPREFIX="${WINEPREFIX:-$HOME/.local/share/wineprefixes/codesys}"
 export WINEARCH=win64
 export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 export WINEDEBUG="${WINEDEBUG:--all}"
 export WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--disable-gpu
+# Keep WINE's menu builder off from the very first wineboot; it would copy
+# Windows shortcuts and file associations into the Linux desktop menus.
+export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:+$WINEDLLOVERRIDES;}winemenubuilder.exe=d"
 CDS_WORK="${CDS_WORK:-$HOME/.cache/codesys-wine}"
 
 log() { printf '\n== %s\n' "$*"; }
@@ -59,7 +70,7 @@ VER="$(basename "$SETUP_EXE" | grep -oE '3\.5\.[0-9]+\.[0-9]+' || true)"
 [ -n "$VER" ] || die "cannot read a 3.5.x.y version from the installer file name"
 case "$(basename "$SETUP_EXE")" in *"CODESYS 64"*) ;; *) die "use the 64-bit installer (CODESYS 64 $VER.exe)";; esac
 for c in wine wineserver winetricks python3; do command -v "$c" >/dev/null || die "missing: $c"; done
-[ "$WITH_PACKAGES" = 0 ] || command -v 7z >/dev/null || die "missing: 7z (Debian/Ubuntu package 7zip) for --packages"
+command -v 7z >/dev/null || die "missing: 7z (Debian/Ubuntu package 7zip)"
 WINE_MAJOR="$(wine --version | sed -E 's/^wine-([0-9]+).*/\1/')"
 if ! [ "$WINE_MAJOR" -ge 11 ] 2>/dev/null; then
   [ "$UNSUPPORTED_WINE" = 1 ] || die "$(wine --version) is not supported. Install WineHQ WINE 11 (winehq-stable):
@@ -106,6 +117,11 @@ wine reg add 'HKCU\Software\Microsoft\Avalon.Graphics' /v DisableHWAcceleration 
 # editors, Gateway, Control Win, ...) into the Linux menu; install.sh creates
 # its own launchers and menu entries instead.
 wine reg add 'HKCU\Software\Wine\DllOverrides' /v winemenubuilder.exe /t REG_SZ /d '' /f >/dev/null
+if [ -n "$DPI" ]; then
+  # WINE's screen resolution (winecfg > Graphics). Both values are needed.
+  wine reg add 'HKCU\Software\Wine\Fonts' /v LogPixels /t REG_DWORD /d "$DPI" /f >/dev/null
+  wine reg add 'HKLM\System\CurrentControlSet\Hardware Profiles\Current\Software\Fonts' /v LogPixels /t REG_DWORD /d "$DPI" /f >/dev/null
+fi
 
 # --- 3. Extract the MSI from the InstallShield EXE --------------------------
 MSI="$CDS_WORK/$VER/CODESYS 64 $VER.msi"
@@ -117,7 +133,7 @@ fi
 
 # --- 4. Install the development system --------------------------------------
 # Skips CodeMeter, the Gateway/Control Win services and the bundled add-on
-# packages (see --packages); the CODESYS Installer is step 5 (--installer).
+# packages (installed in step 6); the CODESYS Installer is step 5.
 if [ ! -f "$INSTALLDIR_UNIX/CODESYS/Common/CODESYS.exe" ]; then
   log "Installing CODESYS $VER (silent MSI, by running it you accept the CODESYS license)"
   wine msiexec /i "$MSI" /qn /norestart \
@@ -132,7 +148,7 @@ fi
 PROFILE_XML="$(ls "$INSTALLDIR_UNIX/CODESYS/Profiles/"*.profile.xml | head -n1)"
 PROFILE="$(basename "$PROFILE_XML" .profile.xml)"
 
-# --- 5. CODESYS Installer (optional) ----------------------------------------
+# --- 5. CODESYS Installer (default on) ----------------------------------------
 # APInstaller 2.6.x is a .NET 8 app; with the Desktop Runtime from its own
 # setup it runs. Installing add-ons with it needs admin rights: use the
 # "Restart as Administrator" button, or tools/runas.vbs for APInstaller.CLI.
@@ -152,41 +168,56 @@ if [ "$WITH_INSTALLER" = 1 ] && [ ! -f "$APINST" ]; then
   [ -f "$APINST" ] || die "CODESYS Installer install failed, see $WINEPREFIX/drive_c/codesys-installer-install.log"
 fi
 
-# --- 6. Bundled add-on packages (optional) ----------------------------------
+# --- 6. Bundled add-on packages ---------------------------------------------
+# Visualization Support and Visualization are always installed: without them
+# CODESYS's library and device repositories end up inconsistent, which is hard
+# to repair later. All other bundled packages follow unless --no-packages;
+# installing them here, in the same run, is the recommended practice.
 # Installed one at a time with PackageManagerCLI (no admin rights needed),
 # with all packages beside each other so dependencies resolve. Do not pass
-# --cancelOnException: creating Start-menu links fails under WINE
+# --cancelOnException: creating Start-menu links fails under stock WINE
 # (IShellLinkDataList::RemoveDataBlock), and cancelling there leaves a package
 # half installed. Without it only the links are skipped.
-if [ "$WITH_PACKAGES" = 1 ]; then
-  PKGDIR="$WINEPREFIX/drive_c/codesys-packages/$VER"
-  DONE="$WINEPREFIX/codesys-wine-packages-$VER.done"
-  if [ -z "$(ls "$PKGDIR"/*.package 2>/dev/null)" ]; then
-    log "Extracting bundled packages"
-    python3 "$HERE/tools/extract_packages.py" "$MSI" "$PKGDIR" >/dev/null
+PKGDIR="$WINEPREFIX/drive_c/codesys-packages/$VER"
+DONE="$WINEPREFIX/codesys-wine-packages-$VER.done"
+if [ -z "$(ls "$PKGDIR"/*.package 2>/dev/null)" ]; then
+  log "Extracting bundled packages"
+  python3 "$HERE/tools/extract_packages.py" "$MSI" "$PKGDIR" >/dev/null
+fi
+printf '@echo off\r\ncd /d %s\\CODESYS\\Common\r\nPackageManagerCLI.exe --profile="%s" --install="C:\\codesys-packages\\%s\\%%~1" --verbose\r\n' \
+  "$INSTALLDIR" "$PROFILE" "$VER" > "$WINEPREFIX/drive_c/install-package-$VER.cmd"
+touch "$DONE"; failed=()
+install_package() {  # file name in $PKGDIR
+  local n="$1"
+  grep -qxF "$n" "$DONE" && return 0
+  log "Package: $n"
+  if wine cmd /c "C:\\install-package-$VER.cmd" "$n" > "$PKGDIR/${n%.package}.log" 2>&1; then
+    echo "$n" >> "$DONE"
+  else
+    failed+=("$n"); echo "   failed, see $PKGDIR/${n%.package}.log"
   fi
-  printf '@echo off\r\ncd /d %s\\CODESYS\\Common\r\nPackageManagerCLI.exe --profile="%s" --install="C:\\codesys-packages\\%s\\%%~1" --verbose\r\n' \
-    "$INSTALLDIR" "$PROFILE" "$VER" > "$WINEPREFIX/drive_c/install-package-$VER.cmd"
-  touch "$DONE"; failed=()
+  wineserver -w
+}
+REQUIRED=()
+for pat in "CODESYS Visualization Support" "CODESYS Visualization"; do
+  f="$(cd "$PKGDIR" && ls -- *.package | grep -E "^$pat [0-9][0-9.]*\.package\$" | sort -V | tail -n1 || true)"
+  [ -n "$f" ] || die "required package missing from the setup: $pat"
+  REQUIRED+=("$f")
+done
+for n in "${REQUIRED[@]}"; do install_package "$n"; done
+if [ "$WITH_PACKAGES" = 1 ]; then
   for p in "$PKGDIR"/*.package; do
     n="$(basename "$p")"
     case "$n" in
       "CODESYS Compatibility Package "*) continue ;;  # part of the MSI install
-      # AxProtector-protected plug-in: without the CodeMeter runtime it pops up
-      # a modal "cpsrt library not found" dialog and fails. Licensed add-on.
-      "CODESYS Application Composer "*) echo "   skipping $n (needs CodeMeter)"; continue ;;
+      # Licensed add-on with an AxProtector-protected plug-in and its own
+      # licensing model: fails ("cpsrt library not found" dialog).
+      "CODESYS Application Composer "*) echo "   skipping $n (licensed, not supported)"; continue ;;
     esac
-    grep -qxF "$n" "$DONE" && continue
-    log "Package: $n"
-    if wine cmd /c "C:\\install-package-$VER.cmd" "$n" > "$PKGDIR/${n%.package}.log" 2>&1; then
-      echo "$n" >> "$DONE"
-    else
-      failed+=("$n"); echo "   failed, see $PKGDIR/${n%.package}.log"
-    fi
-    wineserver -w
+    install_package "$n"
   done
-  [ "${#failed[@]}" = 0 ] || echo "warning: ${#failed[@]} package(s) failed: ${failed[*]}"
 fi
+[ "${#failed[@]}" = 0 ] || echo "warning: ${#failed[@]} package(s) failed: ${failed[*]}"
 
 # --- 7. Online-login crypto fix (default on) -------------------------------
 # Temporary until the ncrypt/bcrypt patches are in a WINE release; it skips

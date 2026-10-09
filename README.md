@@ -22,10 +22,10 @@ This builds on earlier work by others:
 
 ```sh
 git clone https://github.com/Re-CODESYS/codesys-wine.git && cd codesys-wine
-install/install.sh --full ~/Downloads/"CODESYS 64 3.5.22.40.exe"
+install/install.sh ~/Downloads/"CODESYS 64 3.5.22.40.exe"
 ```
 
-Then start CODESYS from the desktop menu, or with `~/.local/bin/codesys-3.5.22.40`. Leave out `--full` for a quicker core-only install (see [Installation in detail](#installation-in-detail)).
+Like the Windows setup, this installs CODESYS with all bundled packages and the CODESYS Installer in one run (2–3 hours on a laptop). Then start CODESYS from the desktop menu, or with `~/.local/bin/codesys-3.5.22.40`. On a HiDPI screen, add `--dpi 144`. See [Installation in detail](#installation-in-detail).
 
 ### Screenshots
 
@@ -53,8 +53,8 @@ The test machine is an Intel i7-7500U laptop with Intel HD 620 graphics, running
 
 - One-command install into a dedicated WINE prefix, with a launcher and a menu entry.
 - Editors, project handling and compiling (a standard project builds with 0 errors).
-- All add-on packages bundled with the setup (`--packages`), including Scripting, Visualization and its **Visual Style Editor** and **HTML5 Control Editor**.
-- **CODESYS Installer 2.6.1** (`--installer`), for listing installations and installing add-ons.
+- All add-on packages bundled with the setup (installed by default), including Scripting, Visualization and its **Visual Style Editor** and **HTML5 Control Editor**.
+- **CODESYS Installer 2.6.1** (installed by default), for listing installations and installing add-ons.
 - Several CODESYS versions side by side in one prefix.
 - **CodeMeter licenses and USB dongles** through CodeMeter for Linux, including licensed add-ons: Git and Profiler install, and Git finds its license. Git operations themselves (commit, push) are not tested yet.
 - With patched WINE, or two patched DLLs dropped into the prefix (done by default): **online login** to the simulation and to **CODESYS Control for Linux SL**.
@@ -64,7 +64,7 @@ Planned: **agentic help for installation and management**, as an agent skill plu
 ### Known limitations
 
 - **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs two patched DLLs in the prefix, or a [patched WINE](wine-patches/), until WINE itself fixes these gaps. `install.sh` adds them by default. Tested with the simulation and a local Control for Linux SL. Hardware PLCs are not tested yet.
-- **CodeMeter only through a native Linux CodeMeter.** `install.sh` adds WIBU's client DLLs, but not the Windows CodeMeter service. Licenses and dongles come from a CodeMeter runtime on Linux. This was tested with USB dongles: the licensed Git add-on finds its license. Using Git or Profiler is not tested yet. **Application Composer** uses a different licensing model and is still skipped by `--packages`.
+- **CodeMeter only through a native Linux CodeMeter.** `install.sh` adds WIBU's client DLLs, but not the Windows CodeMeter service. Licenses and dongles come from a CodeMeter runtime on Linux. This was tested with USB dongles: the licensed Git add-on finds its license. Using Git or Profiler is not tested yet. **Application Composer** uses a different licensing model and is skipped.
 - **No Windows Gateway or Control Win.** Use a natively running CODESYS Edge Gateway for Linux (tested, installed with Control for Linux SL) instead; see [PLC communication](#plc-communication-control-for-linux-sl).
 - **On stock WINE, packages can't create Start-menu links.** Installing still works if `--cancelOnException` is left off, which `install.sh` does.
 - **Installing add-ons in the CODESYS Installer needs admin rights.** See [the FAQ](#faq).
@@ -76,9 +76,9 @@ Details and fixes: [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ### Requirements
 
-- x86-64 Linux with **WineHQ WINE 11** (64-bit and 32-bit), plus `winetricks` and `python3`. `--packages` also needs `7z` (Debian/Ubuntu package `7zip`).
+- x86-64 Linux with **WineHQ WINE 11** (64-bit and 32-bit), plus `winetricks`, `python3` and `7z` (Debian/Ubuntu package `7zip`).
 - Locale `en_US.UTF-8` generated (`locale -a`).
-- About 6 GB of free disk space for the core install, and about 9 GB with `--full`. You also need internet access for winetricks.
+- About 9 GB of free disk space per CODESYS version. You also need internet access for winetricks.
 - The official `CODESYS 64 3.5.x.y.exe` installer.
 
 #### Which WINE
@@ -99,7 +99,7 @@ New to WINE? [docs/wine-basics.md](docs/wine-basics.md) covers the prefix, start
 ### What install.sh does
 
 ```sh
-install/install.sh [--installer] [--packages] [--full] ~/Downloads/"CODESYS 64 3.5.22.40.exe"
+install/install.sh [--no-installer] [--no-packages] [--no-codemeter] [--no-crypto-fix] [--dpi N] [--yes] ~/Downloads/"CODESYS 64 3.5.22.40.exe"
 ```
 
 1. Creates a dedicated win64 prefix at `~/.local/share/wineprefixes/codesys`. You can override this with `WINEPREFIX=`.
@@ -107,18 +107,23 @@ install/install.sh [--installer] [--packages] [--full] ~/Downloads/"CODESYS 64 3
 3. Sets a per-program `*security=native` DLL override for the CODESYS tools. See [the FAQ](#why-do-you-change-a-dll-in-wine).
 4. Re-registers `oleaut32` and turns off WPF hardware acceleration.
 5. Unpacks the InstallShield EXE with `install/tools/is_extract.py`, then runs the CODESYS MSI silently. It leaves out CodeMeter and the Windows Gateway and Control Win services.
-6. Optionally installs the CODESYS Installer and the bundled packages (see below).
-7. Creates the launcher `~/.local/bin/codesys-<version>` and a desktop menu entry. With a non-default `WINEPREFIX`, the prefix name is appended, for example `codesys-3.5.22.40-test`.
+6. Installs the CODESYS Installer and the bundled packages, one at a time with `PackageManagerCLI`. **Visualization Support and Visualization always come first** and can't be left out: without them, CODESYS's library and device repositories end up inconsistent. Application Composer is skipped, because it uses a different licensing model.
+7. Adds the CodeMeter client and the online-login crypto fix (see below).
+8. Creates the launcher `~/.local/bin/codesys-<version>` and a desktop menu entry. With a non-default `WINEPREFIX`, the prefix name is appended, for example `codesys-3.5.22.40-test`.
 
-| Option | What it adds |
+Everything is on by default. The options turn parts off:
+
+| Option | Effect |
 |---|---|
-| `--installer` | **CODESYS Installer 2.6.1** (APInstaller) with the .NET 8 Desktop Runtime it needs, both taken from the CODESYS setup. |
-| `--packages` | The **add-on packages bundled with the setup**, as a Windows install would include. They are installed one at a time with `PackageManagerCLI`. This takes about an hour. Application Composer is skipped (CodeMeter). |
-| `--full` | Both. |
-| `--no-codemeter` | Skips the CodeMeter client (see below). It is **on by default**. |
-| `--no-crypto-fix` | Skips the online-login fix (see below). It is **on by default**. |
+| `--no-installer` | Skips the **CODESYS Installer 2.6.1** (APInstaller) and the .NET 8 Desktop Runtime it needs. |
+| `--no-packages` | Installs only Visualization Support and Visualization, not the other bundled packages. |
+| `--no-codemeter` | Skips the CodeMeter client. |
+| `--no-crypto-fix` | Skips the online-login fix. |
+| `--dpi N` | Sets WINE's DPI in the prefix: 120 for 125 % or 144 for 150 % scaling. |
 | `--crypto-fix-dlls DIR` | Where the patched `ncrypt`/`bcrypt` DLLs are: a release folder or a WINE build tree. |
 | `--yes` | Doesn't ask questions. |
+
+`--installer`, `--packages` and `--full` are still accepted, but they do nothing now, because that is the default.
 
 The script can be re-run safely: finished steps and installed packages are skipped. Running it with another installer version adds that version side by side in the same prefix.
 
@@ -148,7 +153,7 @@ Online login needs a fix that stock WINE doesn't have yet. [wine-patches/](wine-
 
 The Windows Gateway and Control Win services are not installed. Run the Linux runtime and its gateway natively instead. This was tested with CODESYS Control for Linux SL 4.22 on the same machine:
 
-1. In the **CODESYS Installer** (`--installer`), restart as administrator and add the **CODESYS Control for Linux SL** packages.
+1. In the **CODESYS Installer**, restart as administrator and add the **CODESYS Control for Linux SL** packages.
 2. In CODESYS, use the **Deploy Control SL** tool to install the runtime and the Edge Gateway on the Linux host over SSH. This needs `sudo` on the target. Choose the native installation, not the container.
 3. Add the device. **CODESYS Control for Linux SL** is listed under **SoftMotion PLCs**, not SoftPLC.
 4. In the device's **Communication Settings**, **Add Gateway** with IP `127.0.0.1` (or the host's IP) and port `1217`, then **Scan Network** and select the device.
