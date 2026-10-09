@@ -2,21 +2,15 @@
 
 Run the **CODESYS V3.5 Development System** (64-bit IDE) on Linux with WINE.
 
-> Unofficial. Neither CODESYS GmbH nor WineHQ supports this setup. This repository has no CODESYS binaries. Download the installer from the [CODESYS Store](https://store.codesys.com) yourself.
 
 ## About
 
-### What is this
+A script and a set of fixes that install the Windows-only CODESYS V3.5 IDE into its own WINE prefix on Linux. You get a desktop launcher, the editors and compiler, the bundled add-on packages and the CODESYS Installer, all without a Windows VM. 
 
-A script and a set of fixes that install the Windows-only CODESYS V3.5 IDE into its own WINE prefix on Linux. You get a desktop launcher, the editors and compiler, the bundled add-on packages and the CODESYS Installer, all without a Windows VM. Two WINE gaps that block online login and some package installs are fixed by small WINE patches in [wine-patches/](wine-patches/).
+> Unofficial. Neither CODESYS GmbH nor WineHQ supports this setup. This repository has no CODESYS binaries. Download the installer from the [CODESYS Store](https://store.codesys.com) yourself.
 
-### Original solution
+Two WINE gaps that block online login and some package installs are fixed by small WINE patches in [wine-patches/](wine-patches/).
 
-This builds on earlier work by others:
-
-- **[livingforjesus/codesys-macos-install-guide](https://github.com/livingforjesus/codesys-macos-install-guide)**, a 2026 guide that got CODESYS SP22 running on macOS with WINE 11. Its key ideas are the per-program `security.dll` override and installing the MSI directly. This repository adapts that recipe to Linux and extends it.
-- **[CODESYS Forge: codesys-4-linux](https://forge.codesys.com/tol/codesys-4-linux/home/Manual%20Installation/)**, the older Forge project for running CODESYS under WINE. It targets earlier service packs.
-- Forge discussions that first pinned the WINE crypto gap: [SP17 under WINE](https://forge.codesys.com/forge/talk/Engineering/thread/dec16e8f25/) and [SP18/SP20 under WINE](https://forge.codesys.com/forge/talk/forge/thread/fabde5513b/).
 
 ### Quickstart
 
@@ -61,7 +55,7 @@ The test machine is an Intel i7-7500U laptop with Intel HD 620 graphics, running
 
 Planned: **agentic help for installation and management**, as an agent skill plus tools, so an AI assistant like Claude can install, update, diagnose and maintain CODESYS-on-WINE setups for you.
 
-### Known limitations
+### WINE specific behavior
 
 - **Online login fails on stock WINE** (`Unknown error "-2146893783"`). It needs two patched DLLs in the prefix, or a [patched WINE](wine-patches/), until WINE itself fixes these gaps. `install.sh` adds them by default. Tested with the simulation and a local Control for Linux SL. Hardware PLCs are not tested yet.
 - **CodeMeter only through a native Linux CodeMeter.** `install.sh` adds WIBU's client DLLs, but not the Windows CodeMeter service. Licenses and dongles come from a CodeMeter runtime on Linux. This was tested with USB dongles: the licensed Git add-on finds its license. Using Git or Profiler is not tested yet. **Application Composer** uses a different licensing model and is skipped.
@@ -226,6 +220,11 @@ Pull requests are welcome. Scripts are MIT-licensed ([LICENSE](LICENSE)). WINE p
 
 ## Credits
 
-- [livingforjesus/codesys-macos-install-guide](https://github.com/livingforjesus/codesys-macos-install-guide) for the SP22 recipe this started from.
+This builds on earlier work by others:
+
+- **[codesys-macos-install-guide](https://github.com/livingforjesus/codesys-macos-install-guide)**, a 2026 guide that got CODESYS SP22 running on macOS with WINE 11. Its key ideas are the per-program `security.dll` override and installing the MSI directly. This repository adapts that recipe to Linux and extends it.
+- **[CODESYS Forge: codesys-4-linux](https://forge.codesys.com/tol/codesys-4-linux/home/Manual%20Installation/)**, the older Forge project for running CODESYS under WINE. It targets earlier service packs.
+- Forge discussions that first pinned the WINE crypto gap: [SP17 under WINE](https://forge.codesys.com/forge/talk/Engineering/thread/dec16e8f25/) and [SP18/SP20 under WINE](https://forge.codesys.com/forge/talk/forge/thread/fabde5513b/).
+
 - [ISx](https://github.com/lifenjoiner/ISx) for documenting the InstallShield stream format. `install/tools/is_extract.py` is an independent pure-Python implementation.
 - The [CODESYS Forge](https://forge.codesys.com) community for years of WINE reports.
