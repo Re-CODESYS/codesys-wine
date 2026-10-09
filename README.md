@@ -1,16 +1,11 @@
 # codesys-wine
+*Run the **CODESYS V3.5 Development System** (64-bit IDE) on Linux with WINE.*
 
-Run the **CODESYS V3.5 Development System** (64-bit IDE) on Linux with WINE.
-
-
-## About
-
-A script and a set of fixes that install the Windows-only CODESYS V3.5 IDE into its own WINE prefix on Linux. You get a desktop launcher, the editors and compiler, the bundled add-on packages and the CODESYS Installer, all without a Windows VM. 
+All you need to run CODESYS V3.5 IDE on Linux, inside its own WINE prefix. You get a desktop launcher, a fully-fledged IDE with common plugins, editors and compilers and the CODESYS Installer, all without a Windows VM. 
 
 > Unofficial. Neither CODESYS GmbH nor WineHQ supports this setup. This repository has no CODESYS binaries. Download the installer from the [CODESYS Store](https://store.codesys.com) yourself.
 
 Two WINE gaps that block online login and some package installs are fixed by small WINE patches in [wine-patches/](wine-patches/).
-
 
 ### Quickstart
 
@@ -19,7 +14,7 @@ git clone https://github.com/Re-CODESYS/codesys-wine.git && cd codesys-wine
 install/install.sh ~/Downloads/"CODESYS 64 3.5.22.40.exe"
 ```
 
-Like the Windows setup, this installs CODESYS with all bundled packages and the CODESYS Installer in one run (2–3 hours on a laptop). Then start CODESYS from the desktop menu, or with `~/.local/bin/codesys-3.5.22.40`. On a HiDPI screen, add `--dpi 144`. See [Installation in detail](#installation-in-detail).
+Like the Windows setup, this installs CODESYS with all bundled packages and the CODESYS Installer in one run (might take a while). Then start CODESYS from the desktop menu, or with `~/.local/bin/codesys-3.5.22.40`. 
 
 ### Screenshots
 
@@ -64,6 +59,7 @@ Planned: **agentic help for installation and management**, as an agent skill plu
 - **On stock WINE, the Visualization package's post-install step fails** (a WINE `cmd` bug), which would leave the Visualization Toolbox empty. `install.sh` creates the missing file afterwards; for older installs see [troubleshooting](docs/troubleshooting.md#visualization-toolbox-is-empty).
 - **Installing add-ons in the CODESYS Installer needs admin rights.** See [the FAQ](#faq).
 - **First start takes several minutes.** The start page's "Latest news" stays empty.
+- On a HiDPI screen, add `--dpi 144`. See [Installation in detail](#installation-in-detail).
 
 Details and fixes: [docs/troubleshooting.md](docs/troubleshooting.md).
 
