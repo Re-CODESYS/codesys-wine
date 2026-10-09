@@ -1,0 +1,46 @@
+From cbbb129f2f058549de7bb0934302aee139a36fab Mon Sep 17 00:00:00 2001
+From: Struccc <184474500+Struccc@users.noreply.github.com>
+Date: Fri, 9 Oct 2026 13:19:51 +0700
+Subject: [PATCH 6/7] cmd/tests: Test quoted redirection of a builtin inside a
+ pipe.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ programs/cmd/tests/test_builtins.cmd     | 6 ++++++
+ programs/cmd/tests/test_builtins.cmd.exp | 3 +++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/programs/cmd/tests/test_builtins.cmd b/programs/cmd/tests/test_builtins.cmd
+index 6dc24dfa..c446fe4e 100644
+--- a/programs/cmd/tests/test_builtins.cmd
++++ b/programs/cmd/tests/test_builtins.cmd
+@@ -306,6 +306,12 @@ if not exist b echo b should exist
+ erase /q a b & (echo cc1 2>a 1>&2 2>b)
+ if exist a echo a shouldn't exist
+ if not exist b (echo b should exist) else (echo cc2 & type b)
++erase /q a b & (echo foo | echo bar> "a b")
++if exist "a b" (echo pipe quoted redir ok) else echo pipe quoted redir ko
++if exist a (echo pipe quoted redir stray file) else echo pipe quoted redir no stray file
++erase /q a "a b" & (echo.| set /p v="1.0"> "a b")
++if exist "a b" (type "a b" & echo.) else echo set /p quoted redir ko
++erase /q a "a b"
+ 
+ cd .. & rd /s/q foobar
+ 
+diff --git a/programs/cmd/tests/test_builtins.cmd.exp b/programs/cmd/tests/test_builtins.cmd.exp
+index 89762fda..e9ecdbe4 100644
+--- a/programs/cmd/tests/test_builtins.cmd.exp
++++ b/programs/cmd/tests/test_builtins.cmd.exp
+@@ -263,6 +263,9 @@ B
+ C
+ --- multiredirections
+ cc2@space@
++@todo_wine@pipe quoted redir ok
++@todo_wine@pipe quoted redir no stray file
++@todo_wine@1.0
+ ------------ Testing circumflex escape character ------------
+ hello, world
+ hello, world
+-- 
+2.47.3
+

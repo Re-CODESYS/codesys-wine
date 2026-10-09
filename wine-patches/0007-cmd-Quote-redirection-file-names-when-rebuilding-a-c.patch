@@ -1,0 +1,88 @@
+From 17a76937c50ec7a5190b0a945f32b1f628334833 Mon Sep 17 00:00:00 2001
+From: Struccc <184474500+Struccc@users.noreply.github.com>
+Date: Fri, 9 Oct 2026 13:19:52 +0700
+Subject: [PATCH 7/7] cmd: Quote redirection file names when rebuilding a
+ command.
+
+Built-in commands in a pipe are rebuilt into a string and run by a
+child cmd.exe. The redirection file name is stored without its quotes,
+so a name containing spaces was split by the child, e.g.
+'echo| set /p v="1.0" > "a b\c"' wrote to 'a'.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ programs/cmd/tests/test_builtins.cmd.exp |  6 +++---
+ programs/cmd/wcmdmain.c                  | 23 ++++++++++++++++++-----
+ 2 files changed, 21 insertions(+), 8 deletions(-)
+
+diff --git a/programs/cmd/tests/test_builtins.cmd.exp b/programs/cmd/tests/test_builtins.cmd.exp
+index e9ecdbe4..de87608e 100644
+--- a/programs/cmd/tests/test_builtins.cmd.exp
++++ b/programs/cmd/tests/test_builtins.cmd.exp
+@@ -263,9 +263,9 @@ B
+ C
+ --- multiredirections
+ cc2@space@
+-@todo_wine@pipe quoted redir ok
+-@todo_wine@pipe quoted redir no stray file
+-@todo_wine@1.0
++pipe quoted redir ok
++pipe quoted redir no stray file
++1.0
+ ------------ Testing circumflex escape character ------------
+ hello, world
+ hello, world
+diff --git a/programs/cmd/wcmdmain.c b/programs/cmd/wcmdmain.c
+index ba1534dc..76b6a030 100644
+--- a/programs/cmd/wcmdmain.c
++++ b/programs/cmd/wcmdmain.c
+@@ -3423,12 +3423,25 @@ static BOOL rebuild_insert(struct command_rebuild *rb, unsigned pos, const WCHAR
+     return TRUE;
+ }
+ 
++/* file names are stored unquoted, so quote them again when needed for reparsing */
++static BOOL rebuild_append_file_name(struct command_rebuild *rb, const WCHAR *file, BOOL expand)
++{
++    WCHAR output[MAXSTRING];
++
++    wcscpy(output, file);
++    if (expand) handleExpansion(output, TRUE);
++    if (!output[wcscspn(output, L" \t&|<>^(),;=")])
++        return rebuild_append(rb, output);
++    return rebuild_append(rb, L"\"") &&
++        rebuild_append(rb, output) &&
++        rebuild_append(rb, L"\"");
++}
++
+ static BOOL rebuild_append_redirection(struct command_rebuild *rb, const CMD_REDIRECTION *redir, BOOL expand)
+ {
+     WCHAR number[2] = {L'0' + redir->fd, L'\0'};
+     WCHAR clonestr[2] = {};
+     const WCHAR *op;
+-    const WCHAR *dst = redir->file;
+ 
+     switch (redir->kind)
+     {
+@@ -3442,15 +3455,15 @@ static BOOL rebuild_append_redirection(struct command_rebuild *rb, const CMD_RED
+         op = L">>";
+         break;
+     case REDIR_WRITE_CLONE:
+-        op = L">&";
+         clonestr[0] = L'0' + redir->clone;
+-        dst = clonestr;
+-        break;
++        return rebuild_append(rb, number) &&
++            rebuild_append(rb, L">&") &&
++            rebuild_append(rb, clonestr);
+     default: return FALSE;
+     }
+     return rebuild_append(rb, number) &&
+         rebuild_append(rb, op) &&
+-        rebuild_expand_and_append(rb, dst, expand);
++        rebuild_append_file_name(rb, redir->file, expand);
+ }
+ 
+ static BOOL rebuild_append_all_redirections(struct command_rebuild *rb, const CMD_NODE *node, BOOL expand)
+-- 
+2.47.3
+

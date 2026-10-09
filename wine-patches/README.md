@@ -2,14 +2,15 @@
 
 These patches fix WINE gaps that break CODESYS V3.5. They are written against WINE master.
 
-> **Origin and upstream status.** The patches were written with an AI assistant (Claude). WineHQ's contributor policy doesn't accept LLM-generated contributions ([policy](https://gitlab.winehq.org/winehq/winehq/-/wikis/home), "No LLM-generated code"), so they are **not submitted to WINE** and must not be. Upstream, the two problems are reported as WINE bugs instead, written by a human, with traces and the code locations, so WINE developers can fix them. Once a WINE release fixes them, this directory only needs to say which WINE version to use.
+> **Origin and upstream status.** The patches were written with an AI assistant (Claude). WineHQ's contributor policy doesn't accept LLM-generated contributions ([policy](https://gitlab.winehq.org/winehq/winehq/-/wikis/home), "No LLM-generated code"), so they are **not submitted to WINE** and must not be. Upstream, the problems are reported as WINE bugs instead, written by a human, with traces and the code locations, so WINE developers can fix them. Once a WINE release fixes them, this directory only needs to say which WINE version to use.
 
 | Patches | Fixes | Upstream WINE bug |
 |---|---|---|
 | `0001`–`0003` ncrypt | **Online login** (Simulation, very likely real PLCs too): `Unknown error "-2146893783"` (`0x80090029 NTE_NOT_SUPPORTED`). `NCryptEncrypt` refused RSA OAEP padding, and `NCryptDecrypt` was a stub. | to be filed |
 | `0004`–`0005` shell32 | **Package install** aborting at `Link: ….exe` with "The method or operation is not implemented" (for example Visualization 4.10). `IShellLinkDataList::RemoveDataBlock` was a stub; CODESYS removes the `EXP_SZ_ICON_SIG` block. | to be filed |
+| `0006`–`0007` cmd | **Empty Visualization Toolbox.** A built-in command in a pipe lost the quotes of its redirection target, so the Visualization package's post-install step wrote `C:\ProgramData\CODESYS\Visual` instead of `Visual Elements\formatinfo` (see [troubleshooting](../docs/troubleshooting.md#visualization-toolbox-is-empty); a one-line fix works on stock WINE too). | to be filed |
 
-The patches follow WINE's submission conventions: conformance tests go in their own commit with `todo_wine` markers, and the fix commit removes those markers. The tests in `dlls/ncrypt/tests` and `dlls/shell32/tests` pass on WINE in 32-bit and 64-bit at every commit.
+The patches follow WINE's submission conventions: conformance tests go in their own commit with `todo_wine` markers, and the fix commit removes those markers. The tests in `dlls/ncrypt/tests`, `dlls/shell32/tests` and `programs/cmd/tests` pass on WINE in 32-bit and 64-bit at every commit.
 
 The RSA-OAEP fix also depends on bcrypt fixes that first shipped in WINE 11.5 ([bug 59460](https://bugs.winehq.org/show_bug.cgi?id=59460)). So applying the patches to the WINE 11.0 source isn't enough. Use one of the two routes below.
 
@@ -39,6 +40,8 @@ To undo: delete the two registry values, and copy back the originals from `/opt/
 To check that it works, look for these lines in a `WINEDEBUG=+loaddll` trace: `Loaded L"C:\\windows\\system32\\ncrypt.dll" … : native`, and the same for `bcrypt.dll`.
 
 shell32 isn't part of the drop-in. Replacing WINE's shell32 affects all file and shortcut handling, and it's only needed while installing packages. On stock WINE, install packages without `--cancelOnException`; only the editors' start-menu links are then missing.
+
+cmd isn't part of the drop-in either: its only known effect on CODESYS is the missing `Visual Elements\formatinfo`, and creating that file by hand is enough ([troubleshooting](../docs/troubleshooting.md#visualization-toolbox-is-empty)).
 
 ## Route B: build patched WINE
 
