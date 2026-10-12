@@ -32,9 +32,9 @@ REPLACEMENT='codesys-wine fix'
 OVR='HKCU\Software\Wine\AppDefaults\CODESYS.exe\DllOverrides'
 INFO='https://github.com/Re-CODESYS/codesys-wine/tree/main/wine-patches'
 REPO='Re-CODESYS/codesys-wine'
-RELEASE_TAG='crypto-fix-20261002'
-RELEASE_ZIP='codesys-wine-crypto-fix-20261002.zip'
-RELEASE_SHA256='e1110f744fd513e414aad3f77b406ac0a6cccb1e912514da7981e9fda0609dd8'
+RELEASE_TAG='crypto-fix-20261012'
+RELEASE_ZIP='codesys-wine-crypto-fix-20261012.zip'
+RELEASE_SHA256='b56d1adfa3242fc36e7e66914eb4e1721a2008bd0e25d6c668ce35b1020e10ee'
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/codesys-wine/$RELEASE_TAG"
 
 log() { printf '\n== %s\n' "$*"; }
